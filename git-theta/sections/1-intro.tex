@@ -1,0 +1,46 @@
+\section{Introduction}
+
+Over the past fifty years, the development of software has gone from a poorly understood and unregimented practice to a well-studied set of processes and methodologies that help ensure that software is performant, high-quality, and correctly implemented \citep{brooks1975mythical}.
+A key component of modern software development are \textit{version control systems}, which allow fine-grained tracking of changes to a piece of software.
+Version control systems also typically enable collaborative development of software by providing functionality for soliciting and incorporating changes from contributors.
+This functionality is key to the development of \textit{open-source} software, i.e.\ software whose source code is developed completely in the open.
+Open-source software underlies many key technologies, including operating systems, compilers, web servers, programming languages, and more.
+Much of this ubiquitous open-source software is developed by distributed communities of individuals who iteratively build, update, and improve the software through thousands of contributed changes.
+
+In the last few decades, machine learning models have increasingly become a key part of software systems.
+However, the development of machine learning models is often relatively primitive in comparison with software development.
+For example, in many applications of machine learning, it can be useful to update a trained model -- for example, to fix problematic behavior, to add new capabilities, or make it applicable to newly collected data.
+While sophisticated tools like DVC,\footnote{\url{https://dvc.org/}} Weights and Biases,\footnote{\url{https://wandb.ai/}} MLFlow,\footnote{\url{https://mlflow.org/}} and the Hugging Face Model Hub\footnote{\url{https://huggingface.co/models}} provide useful functionality for keeping track of subsequent versions of a machine learning model, their usage is not widespread.
+Furthermore, all of these tools treat the machine learning model's checkpoint (i.e.\ saved parameter values) as a blob of binary data -- i.e., they are treated in the same way as any large file.
+As such, any change to any of the model's parameters incurs the same communication and storage costs as changing all of the model's parameters.
+As an additional consequence, these tools have no support for important operations involved in collaborative development such as merging independently introduced updates from different contributors.
+This lack of functionality is like a major contributing factor to the fact that machine learning models are almost never built collaboratively.
+However, we are optimistic that large-scale collaboration is possible. 
+As a motivating example, there are currently over 10,000 variants of the BERT model on the Hugging Face Model Hub.
+What if the collective efforts used in these many training runs could be combined and reused?
+
+In this work, we aim to address these issues by introducing Git-Theta, a version control system that supports cheaply communicable updates as well as methods for merging updates from different contributors.
+To ensure broad applicability and long-term relevance of Git-Theta, we designed a plugin system that makes it straightforward to add new update types, merging methods, and supported checkpoint formats.
+We built Git-Theta as extension of Git, the most widely used version control system (according to the StackOverflow 2022 Developer Survey,\footnote{\url{https://survey.stackoverflow.co/2022/\#version-control-version-control-system-prof}} over 95\% of professional developers primarily use Git).
+As such, Git-Theta can be easily integrated into existing software development pipelines and allows tracking both the code and parameters of a model in the same repository.
+Compared to existing systems for tracking models that treat the checkpoint as a binary blob, Git-Theta is dramatically more communication- and space-efficient and also supports automatic merging.
+We are optimistic that these features will provide a major step forward in enabling collaborative and continual development of machine learning models.
+
+We review necessary background of Git and Git-LFS in \cref{x}.
+Then, in \cref{x}, we describe Git-Theta in detail, including its motivation, usage, and implementation details.
+To ensure that Git-Theta achieves our goals, we benchmark a real-world use-case involving adaptation and improvement of the pre-trained T0 model \citep{sanh2021multitask} based on the T-Few methodology \citep{liu2022tfew} in \cref{x}.
+Finally, we discuss related work and future plans in \cref{x} and \cref{x} respectively.
+
+
+
+% \begin{itemize}
+%     \item In ML, a common paradigm has been to initialize a model from one of a few canonical pre-trained checkpoints (e.g., BERT, T5, CLIP, ResNet-101), perform a single training run to fit the model on some task, and publish the final model as a static artifact.
+    
+%     \item Contrast this with the software development world, where products are iteratively revised by large, often distributed, teams of developers all  concurrently applying changes to a codebase. This is possible in large part due to Distributed Version Control Systems (DVCS), most popularly the Git version control system.
+    
+%     \item In an effort to build ML models more like we build software, iteratively and collaboratively, we introduce Git-Theta, a Git extension for doing distributed version control of ML models natively through Git.
+    
+%     \item Summarize the features of Git-Theta
+
+%     \item Give a brief overview of the advantages of Git-Theta over using Git or Git LFS to do model version control
+% \end{itemize}

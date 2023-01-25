@@ -1,0 +1,131 @@
+\section{The Lifecycle of a Git-Theta Model}
+% Shout-outs to Ted Chiang
+% WHo's that?
+
+Git-Theta's usage and implementation are perhaps best elucidated by tracking what happens to a model under Git-Theta version control. Exact details of the implementation are expanded upon in Section \ref{sec:implementation}.
+\paragraph{Tracking a Model}
+After installation, Git-Theta begins tracking a model checkpoint with the command \code{git theta track <checkpoint>}. This configures Git to use Git-Theta when handling the checkpoint by setting the file's \code{filter}, \code{diff}, and \code{merge} attributes in the \code{.gitattributes} file. 
+
+\paragraph{Staging a Model}
+Running \code{git add <checkpoint>} to stage the model triggers the Git-Theta clean filter. Internally, the clean filter uses a \code{Checkpoint} class (Section~\ref{sec:Checkpoint}) to load the framework-native checkpoint into a standardized format. It then checks whether a previous version of the model exists and identifies the parameter groups (i.e. weight matrices, bias vectors, etc.) that have been modified or added by checking the tensor's locality sensitive hash (Section~\ref{sec:LSH}).
+
+Any parameter groups that were modified or added are then passed to an \code{Update} class (Section~\ref{sec:Update}) that replaces the parameter group tensor with the smallest amount of information needed to describe how the parameter group was modified. For a full dense update of a parameter group, this results in just keeping the new parameter values. However, for communication-efficient updates like sparse or low-rank updates, this results in storing a sparse tensor or low-rank vectors.
+
+The \code{Update} class then  calls a \code{Serializer} (Section~\ref{sec:Serializer} to serialize the parameter group update as a binary blob. This serialized update is passed to the Git LFS clean filter, which stores the update in \code{.git/lfs/objects/} and returns the pointer file metadata associated with the serialized object.
+
+Finally, after processing each parameter group, the Git-Theta clean filter creates a model metadata file. This file contains per-parameter group metadata such as information about each group's tensor (i.e. shape, dtype, locality sensitive hash), the metadata produced by the LFS clean filter, and additional information such as the update type. This metadata file is what is actually staged and versioned by Git.
+
+
+% Running \code{git add <checkpoint>} will trigger the Git-Theta clean filter and save the result to the staging area. Git-Theta views model checkpoint is a collection of weights that parameterize the layers of the network. The Git-Theta clean filter used a ``Checkpoint'' to split the framework-native checkpoint into a collection of weights. Each weight is compared to its previous value---the Git-Theta clean filter store weight metadata to avoid actually loading the previous parameter value, see Section~\ref{sec:LSH} for more details. The past metadata is reused for unchanged weights while changed weights are passed to an ``Update''. The ``Update'' uses a ``Serializer'', generally TensorStore \brian{cite}, to convert the weight into a binary blob. This blob is then passed to the Git LFS clean filter, which stores the blob and returns an LFS pointer file. The Git-Theta clean filter then aggregates these, in addition to other parameter metadata, to make a model metadata file. Weights are processed concurrently using asyncio. The clean filter outputs the final model metadata file which is stored in the Git staging area.
+
+\paragraph{Committing a Model}
+After committing a model with \code{git commit}, Git invokes the Git-Theta post-commit hook. The hook inspects the most recent commit, looking for Git-Theta model metadata files. When found, the hook processes the metadata file, looking for parameter groups that were passed to Git LFS and thus written to \code{.git/lfs/objects} as part of the commit. The hook then stores a list of these these LFS objects in \code{.git/theta/commits/<commit\ hash>}.
+
+\paragraph{Pushing a Model to a Remote}
+Just before pushing a series of commits to a remote, Git invokes the Git-Theta pre-push hook. This hook uses the data in \code{.git/theta/commits/} to find parameter groups were added or modified during these commits. The LFS objects associated with these parameters are synced to an LFS remote server with \code{git lfs push}.
+
+\paragraph{Fetching a Model from a Remote}
+Git performs the \code{git fetch} operation normally. However, since the Git remote contains a Git-Theta metadata file in place of the actual model, the result of a fetch is that only the metadata file is downloaded and placed in the staging area.
+
+\paragraph{Checking Out a Model}
+During operations like \code{git checkout}, the Git-Theta metadata file is moved from the staging area to the working directory. During this process Git passes the metadata file to the Git-Theta smudge filter. 
+
+For each parameter group, Git-Theta uses the \code{Update} class to load the actual parameter value, asynchronously. To do so, the \code{Update} reads the metadata for a parameter group, and passes the LFS metadata to the Git LFS smudge filter to retrieve the serialized update from either  \code{.git/lfs/objects} or the LFS remote server.  The \code{Serializer} is used to convert the serialized update back into tensors. If the update being loaded depends on previous parameters (e.g., a low-rank update that is applied on top of previous parameters), the \code{Update} recursively loads the previous version of the parameter group.
+
+After each parameter group has been  have been loaded, the Git-Theta smudge filter uses the \code{Checkpoint} class to convert the collection of parameter groups back into a framework-native checkpoint. Git then places this reconstituted checkpoint in the working tree.
+
+\paragraph{Merging Models From Different Branches}
+When merging commits that have made modifications to the same model, Git-Theta's custom merge driver is used. The driver loads the model metadata file from both branch as well as their common ancestors. When merge conflicts are detected a menu is shown to the user of possible merge resolutions. The ``Merge'' the user selects merges the weight and it is added to the merged model. Finally the merged model is output and Git commits it.
+
+\paragraph{Diffing Models}
+
+
+\section{Git-Theta Implementation} \label{sec:implementation}
+
+Git customization implements Inversion of Control \brian{cite}. Users design custom modules but do not control when they are executed, that is controlled by the framework, Git. Git-Theta is designed similarly. Control flow for core functionality, like clean and smudge, are defined by Git-Theta, but the actual implementations are handled by plugins. Git-Theta leverages Python's \brian{cite} entry-point based plug-in system. While Git-Theta ships with plug-ins---described below---that support many common frameworks, end-users can define their own to handle custom workflows. Vague terms above, like ``Checkpoint'' represent these plug-ins.
+
+\subsection{Checkpoints}
+
+\brian{I have been using ``a collection'', is something like ``a map of names to weights'' or ``a map of weights better?''.}
+The first type of plug-in Git Theta supports is the ``Checkpoint''. During the clean filter, a checkpoint plugin is responsible for loading a framework-native checkpoint and converting it into a collection of weights. During the smudge filter, the checkpoint converts the collection of weights to the framework-native checkpoint format.
+
+Git-Theta currently supports Pytorch \brian{cite}, Tensorflow \brian{cite}, Flax \brian{cite/TODO}, and T5X \brian{cite} checkpoints. \brian{Finish the t5x plugin}.
+
+% \brian{Are these useful? Maybe go to the appendix? They aren't the exact API but convey the meaning}
+% \brian{Need to fix overflow}
+% \begin{minted}[fontsize=\footnotesize]{Python}
+% ParameterMap = Dict[Tuple[str, ...], Parameter]
+
+% class Checkpoint:
+%   @property
+%   def name(self):
+%       """The name of the Checkpoint plug-in, used for loading."""
+
+%   @classmethod
+%   def load(cls, checkpoint_path: str) -> ParameterMap:
+%       """Load framework-native checkpoint and convert to a collection of weights."""
+
+%   def save(self, weights: ParameterMap, checkpoint_path: str):
+%       """Save the weight collection to a framework-native checkpoint."""
+% \end{minted}
+% \label{lst:checkpoint}
+
+\subsection{Updates}
+
+The responsibility of update plug-ins is the reading and writing of a weight. The API of an Update plug-in include an \code{apply} method which gets the weight value after applying this update and a \code{write} method which saves the weight value to disk. The simplest update type is a ``Dense'' update where the weight found in the checkpoint is written directly to disk during the clean filter and the weight is returned exactly as is it on the disk during the smudge filter.
+
+Additionally Git-Theta supports Incremental Updates where the value of a parameter depends on it's previous value. During the \code{apply} method, an Incremental Update uses the model metadata to see what was the last update applied and when did it happen in the Git history and based on that it creates a new Update plug-in. The previous value is then obtained by calling recursively calling the \code{apply} method on this new Update plug-in. In turn, new Update plug-in may also require the previous value. When this happen it follows the same process to create and use another new Update plug-in. The recursion repeats until an Update like ``Dense'' is reached that does not require previous values and returns a real weight to its caller. The weight travels back up the call stack as updates receive the previous value and apply their update to it until finally the original update plug-in is reached. At each step in this recursive chain, each actual weight value comes from some commit in the Git History meaning Git-Theta does not need to manage multiple versions directly. Currently Incremental Updates support a linear history and the implementation is based composite pattern \brian{cite}---Incremental Updates have the same API as updates like Dense that end the recursive chain.
+
+Git-Theta currently supports sparse, where only a few parameters within a weight, and low-rank, where the update to a weight $\in \mathbb{R}^{M \times N}$ is broken into two $\in \mathbb{R}^{M \times K}, \mathbb{R}^{K \times N}$, updates where $K$ is small.
+
+% \begin{minted}[fontsize=\footnotesize]{python}
+% class Update:
+
+%   @property
+%   def name(self):
+%       """The name of the Update plug-in, used for loading."""
+
+%   def write(self, param: Parameter) -> LfsMetadata:
+%       """Write the parameter to disk and return metadata required for reading."""
+
+%   def apply(self, param: ParamMetadata) -> Parameter:
+%       "Load the parameter."""
+% \end{minted}
+
+\paragraph{Serializers:} The only serializer currently in use is Tensorstore \brian{cite}.
+
+\subsection{Merges}
+
+Merge Plug-in are used when multiple commits change the same weight in a model. For each merge conflict, the Git-Theta merge driver dynamically builds menu of plug-ins. Merge plug-ins help populate this menu by providing a summary of what they do, what keyword should be used to select them, and what kinds of weight merge conflicts they are able to resolve---allowing the driver to build a menu with only relevant plug-ins.
+
+Git-Theta currently supports resolving merge conflicts by using the change from the current branch, using the change from the other branch, using the change from the ancestor (i.e. throwing away both changes), and averaging the parameters from each branch.
+
+\subsection{Diffs}
+
+\brian{TODO}
+
+\subsection{Locality Sensitive Hash}
+\label{sec:LSH}
+
+When a weight is unchanged since the previous commit Git-Theta avoid storing a new copy. To avoid loading the model twice when comparing to previous parameters Git-Theta uses the weight metadata to compare. Mismatches in things like shape or dtype immediately signal that the weight has changed. To check if the content is unchanged Git-Theta compares parameter hashes. Na\"{i}vely hashing the underlying bytes is unreliable. A single change in byte order from things like different machines or different library versions result in a completely different hash value. Additionally, when using Incremental Updates, where the final value is computed on the fly, numerical noise from different implementations or parallelism can introduce tiny differences in parameter values. These errors are small enough that they do not effect results when used in Machine Learning models \brian{cite}, but do result in hash mismatches.
+
+To avoid this issue, Git-Theta hashes parameters using a Locality Sensitive Hash (LSH) \brian{cite}. An LSH will hash similar items to the same same value and provide probabilistic bounds on false positives. Git-Theta uses an LSH that approximates Euclidean distance based on bucketed projection of each point onto a line \brian{cite}. Additionally, the random pool approach from \brian{citet} is used to allow the LSH to hash weights of different sizes. The Euclidean LSH is $(d_1, d_2, p_1, p_2)$ \brian{TODO: Fill this in} sensitive, that is, if $\text{distance}(x, y) \leq d_1$ then $\Pr[h(x) = h(y)] \geq p_1$ and \brian{finish explanation, convert to math operators?}.
+
+\brian{Add false negative bounds}
+Git-Theta's LSH is calibrated so that two weights that have a Euclidean distance less than \brian{TODO} then they will have the same hash with a probability of at least \brian{TODO}. As a safety precaution, weights that have a Euclidean distance $\in [, ]$ \brian{TODO} are checked with \code{np.allclose} before deciding if they match or not.
+
+% \subsection{Clean Filter}
+% The Git-Theta clean filter reads the model being staged, serializes each of the model's parameter groups, and then passes the serialized parameter groups to the Git LFS clean filter. It then aggregates the Git LFS pointer files created for each parameter group into a Git-Theta multi-pointer file that gets staged. The multi-pointer file contains the Git LFS pointer information for each parameter group as well as other metadata such as the hash, shape, and dtype of the actual tensor being stored. Should probably reference a figure with an example Git-Theta multi-pointer file.
+
+% \subsection{Post-Commit Hook}
+% Just after a commit is made, the Git-Theta post-commit hook inspects the most recent commit for Git-Theta multi-pointer files. If any are found, the hook identifies the objects that were written to \code{.git/lfs/objects/} as part of that commit, and stores those object hashes in \code{.git/theta/commits/}.
+
+% \subsection{Pre-Push Hook}
+% Just before pushing a sequence of commits to a Git remote, the pre-push hook reads \code{.git/theta/commits/} to check which parameter group objects were modified in the commits. It then passes those objects to \code{git lfs push} to sync those objects to the Git LFS remote. 
+
+% \subsection{Smudge Filter}
+% When moving a multi-pointer file from the staging area to the working directory, the Git-Theta smudge filter reads the multi-pointer file and passes each parameter group pointer information to the Git LFS smudge filter. This fetches the serialized data for each parameter group, either from \code{.git/lfs/objects/} or from the Git LFS remote, depending on where the data is. Once the Git-Theta smudge filter has the serialized data for all of the parameter groups, it reconstructs the model checkpoint. This reconstructed checkpoint is placed in the working directory by Git.
+
+% \subsection{Handling of Structured Updates}
+
+% \subsection{Diff and Merge Tools}

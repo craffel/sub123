@@ -1,0 +1,66 @@
+\section{From MAB to FLAD}
+\label{sec:mab_to_flad}
+
+% (1) How can FLAD be formulated as an MAB problem
+In this work we formulate few-shot learning with auxiliary data (FLAD) as a multi-armed bandit (MAB) problem as follows. Assume auxiliary data $\mathcal{D}_{\mathcal{A}}$ is split into individual datasets $\mathcal{D}_{a}$ and at each round of training a learner updates it's policy $\pi$ over the auxiliary datasets. Assume that at each round a batch of data is sampled from a single dataset $\mathcal{D}_{a}$ selected by the policy, i.e.\ $\{\mathbf{x},\mathbf{y}\} \sim \mathcal{D}_{a}$. Then, the model being trained $f_\theta$ is updated through a gradient w.r.t. $\theta$ calculated over the sampled batch using a task-appropriate loss function as $\nabla_{a}=\nabla_{\theta}\mathcal{L}(\mathit{f}_{\theta},\mathbf{x},\mathbf{y})$. For practical purposes of optimizing large neural networks with stochastic gradient descent-based methods, we let $G$ be the number of rounds between model updates to allow for varying batch sizes and for multiple auxiliary datasets to occur in a single model update. For simplicity, after every $G$ rounds the model also computes the target gradient, $\nabla_{\mathcal{T}}=\nabla_{\theta}\mathcal{L}(\mathit{f}_{\theta},\mathcal{D}_{\mathcal{T}})$, and updates model parameters w.r.t. $\nabla_{\mathcal{T}}+\sum_{a\in\mathcal{A}}\nabla_{a}$.
+
+\paragraph{Designing the Reward Function}
+% Considerations
+% A central feature of the MAB setting is that the environment provides a reward after each decision made by the learner. There are multiple aspects to consider when designing a reward for FLAD, and we design our reward function with the following considerations: 1. it should utilize information intrinsic to the model and the losses being optimized, not a metric external to the model (e.g.\ accuracy or BLEU), 2. it should incur minimal space and computational costs above standard training procedures, and 3. it should be proven as a good approximation to transfer.
+We design the reward function with our desiderata in mind. To ensure that our algorithm adds minimal memory and computational overhead we consider rewards that utilize information intrinsic to the model and the losses being optimized, not an external metric (e.g.\ accuracy or BLEU).
+
+% Our reward
+In this work we adopt a gradient-based reward inspired by previous works~\citep{https://doi.org/10.48550/arxiv.1812.02224, NEURIPS2019_0e900ad8, yu2020gradient, wang2021gradient}. Formally, at turn $t$ let $\mathcal{D}_a$ be the auxiliary dataset selected by the learner, then we define our reward function as
+\begin{equation}
+\label{eq:reward}
+R_{a,t} = \frac{\nabla_{a}\cdot\nabla_{\mathcal{T}}}{\|\nabla_{a}\|\|\nabla_{\mathcal{T}}\|}
+\end{equation}
+i.e.\ the cosine similarity between the gradients of the sampled auxiliary dataset batch and the whole target dataset. This reward adds minimal computational complexity at each round (three vector dot products, two square roots, and two scalar multiplications). Additionally, while this reward adds space requirements,
+% storage of the target gradient and $G$ auxiliary gradients at a time,
+we show later that this can be reduced to at most $(G+1)*2.3$\% of the full model parameters.
+% Furthermore, this metric has been thoroughly proven in previous works~\citep{https://doi.org/10.48550/arxiv.1812.02224, NEURIPS2019_0e900ad8, yu2020gradient, wang2021gradient}.
+
+
+% Now, to allow the learner from MAB to make such decisions, we need to decide on a reward. We use cosine similarity between gradient of auxiliary dataset and target dataset, inspired by previous methods of quantifying task relatedness \citep{https://doi.org/10.48550/arxiv.1812.02224, vu-etal-2020-exploring}. \citet{pruksachatkun-etal-2020-intermediate} utilize probing tasks to determine transferability across tasks, but this is not computationally feasible for an online algorithm.
+
+% (2) Assumptions (differences between standard MAB and our setting)
+\subsection{Modelling Assumptions, Implications, and Consequences}
+\label{sec:modelling_assumptions}
+% Assumptions:
+% Implicit in our formulation of FLAD are a few assumptions. \alon{Shorten this section or move to discussion section.}
+
+% Adversarial setting
+% \paragraph{FLAD as an Adversary} Firstly, the formulation we follow necessitates modelling the environment as an adversary. This is due to three factors: the non-convex loss landscape of deep neural networks, the use of stochastic gradient descent-based methods for optimization, and our use of gradient alignment as a reward function. These factors imply that we cannot guarantee that the rewards for each arm are stationary or gaussian. However, we will later empirically show that gradient alignments maintain a weak form of stationarity.
+\paragraph{FLAD as an Adversary} First, the formulation we follow necessitates modelling the environment as an adversary. This is due to three factors: the highly non-convex loss landscape of deep neural networks, the use of stochastic gradient descent-based optimization, and our use of gradient alignment as a reward function. These factors imply that the rewards for each arm cannot be guaranteed to be stationary, independent, or gaussian. However, we will later empirically show that gradient alignments maintain a weak form of stationarity.
+
+% Multi-task model
+% \paragraph{Parameter Sharing}
+% In addition, our reward function requires that the model $\mathit{f}$ share parameters across datasets. We believe this is not overly restrictive thanks to the ongoing trend of unifying input formats so that a single model can handle many tasks. For example, in NLP, works have focused on a unified text-to-text format~\citep{McCann2018decaNLP,radford2019language,raffel2020t5, NEURIPS2020_1457c0d6}, and other works have extended this idea to multi-modal settings where e.g.\ text and images can be fed into a single model \citep{wang2022ofa, alayrac2022flamingo}.
+% Such models are good candidates for our reward formulation.
+\paragraph{Parameter Sharing}Next, our reward function requires that the model $\mathit{f}$ shares parameters across datasets. We believe this is not overly restrictive due to the trend of unifying input formats for single models to handle many tasks (e.g.\ text-to-text~\citep{McCann2018decaNLP,radford2019language,raffel2020t5, NEURIPS2020_1457c0d6} and multi-modal settings~\citep{wang2022ofa, alayrac2022flamingo}).
+
+% Efficiency-vs-accuracy tradeoff
+% \paragraph{Mini-Batch SGD}
+% Next, we assume that the gradient from a single mini-batch from an auxiliary dataset is a reasonable approximation of the gradient w.r.t. the full dataset. This assumption allows us to run the algorithm efficiently, rather than requiring a pass over full auxiliary datasets. We believe this to be a reasonable assumption as over the course of many sampling steps approximation errors tend to balance each other out and this has proven to improve training efficiency as has been well demonstrated with mini-batch SGD.
+% Similarly, we have a tradeoff between efficiency and accuracy in our reward function. While it is possible to use validation metrics as a reward, this would require validating after every mini-batch, increasing the time-complexity of the training. Additionally, this would require us to use only a single mini-batch per gradient update, as opposed to our currently flexible setup which updates every $G$ steps.
+\paragraph{Mini-Batch Reward Calculation}Additionally, to improve efficiency, we assume that the gradient of a single mini-batch from an auxiliary dataset is a reasonable approximation of the gradient w.r.t the full dataset. We believe this to be a reasonable assumption as over the course of many sampling steps approximation errors tend to balance each other out and this has proven to improve training efficiency as has been well demonstrated with mini-batch SGD.
+
+% \paragraph{Discrepancy Between MAB Metric and Test Metric}
+% Finally, in traditional bandit settings the success of an algorithm is directly measured by the reward being optimized. However, in our setting the reward we receive from playing an arm (e.g.\ gradient similarity) may not the same metric that we aim to optimize (e.g.\ cross-entropy, accuracy, or ROUGE-L on a held-out validation set of the target task). Furthermore, although we measure algorithmic success on a validation set, we actually desire for the model to generalize to an unseen test set, further removing our reward from the underlying metric of interest.
+\paragraph{Discrepancy Between Reward and Evaluation Metric}Finally, the success of an algorithm in traditional bandit settings is directly measured by the reward being optimized. However, in our setting the reward we receive from playing an arm may not be the same metric that we aim to optimize (e.g.\ cross-entropy, accuracy, or ROUGE-L).
+
+% UCB1 assumes rewards are normally distributed
+
+% MAB problems are designed based on the fact that there will always be a single arm with highest average reward over any time horizon. While that will be true for receiving rewards, in FLAD, maximizing similarity is a proxy for our true goal, improving a metric on a held out validation set. In fact, in an extreme case where the learner finds some data which is exactly the same as our target dataset, then we end up with the same performance as if we fine-tuned directly on the target data only. In fact, this leads to worse performance because we are in a few-shot setting, and we want to introduce useful noise through our auxiliary tasks.
+
+% \citet{Kim2020TheLC} show that the self-attention mechanism is not Lipschitz for an unbounded input domain. In this and many recent works in NLP, models based on the transformer architecture are used which utilize self-attention. Although we can bound the change in model parameters during the learning process, because of the non-Lipschitz property of self-attention, we cannot make any guarantees on how model predictions will change over the course of training. This leads us to believe that our FLAD setting is most similar to the adversarial MAB formulation.
+
+% \paragraph{Challenges for the Learner}
+% % Challenges:
+% Under our formulation, the learner faces the following challenges:
+% \begin{enumerate}
+%     \item Efficiently determining the effect of each auxiliary data batch on the target task
+%     \item Balancing selection from the most rewarding datasets while taking into consideration the dynamics of training (exploration-exploitation)
+% \end{enumerate}
+
+% As we have demonstrated, our formulation for FLAD fits very well into the MAB framework, and so in the next section we will introduce our variations on the \ex{} and \ucb{} algorithms to solve the FLAD problem.

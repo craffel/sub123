@@ -1,0 +1,80 @@
+\section{Benchmarking}
+
+To test the efficacy of Git Theta's approach to model versioning, we compare to versioning with Git LFS in a reasonable community development flow.
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centerline{\includegraphics[width=\columnwidth]{figures/benchmark-graph.pdf}}
+\caption{Git commit graph representing our benchmark. Starting from a pre-trained T0 3B model, it was updated using LoRA on CB, forked and then trained on RTE, trained on ANLI, and merged via parameter averaging. Finally, pretraining sentinel tokens were removed. All training was done in the few-shot setting.}
+\label{fig:commit-graph}
+\end{center}
+\vskip -0.2in
+\end{figure}
+
+We start with a pretrained model, T0 3B \brian{cite} that is tracked with version control. We then do few-shot training on CB \brian{cite} using LoRA \brian{cite}. \brian{It would be helpful to have Haokun add some details}. The low rank updates from LoRA were integrated backing into the model weight so there was no change to the structure of the model. On a branch, fine-tuning was used to train the model using the few-shot RTE \brian{cite} dataset. Concurrently on the main branch, we did few-shot training on ANLI r-1 \brian{cite}. The RTE trained model was merged back into main-line development using parameter averaging \cite{}. Finally, we removed the T5 \cite{} pre-training sentinel tokens from the vocabulary to ensure the model would not output them. Training hyper-parameters can be found in Section \brian{TODO}. Figure~\ref{fig:commit-graph} provides an overview of this development workflow.
+
+After each training session the model was added and committed to two repositories, one using Git LFS for version control and the other using Git Theta. As many model version control system either leverage Git LFS directly or use a similar implementation---one blob per checkpoint, we only compare to Git LFS.
+
+At each commit we compare: the wall-clock time for a \code{git add}, essentially how long the clean filter takes, the wall-clock time for a \code{git checkout}---how long the smudge filter takes---and a the size of the objects stored on disk. Data transferred is also an important metric but eventually all checkpoint files need to be pushed to the remote so the on-disk size is a good proxy for the amount of data set over the network. Git LFS, and by extension Git Theta, use file hashing to avoid sending redundant data over the wire. Similarly upload/download times are strongly correlated to file size, and differences would mostly amount to uncontrolled variance in the network.
+
+Table~\ref{tab:benchmark} shows the results for each version control system.
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centerline{\includegraphics[width=\columnwidth]{figures/benchmark-perf.pdf}}
+\caption{Model performance at different points in commit history.}
+\label{fig:perf}
+\end{center}
+\vskip -0.2in
+\end{figure}
+
+
+\brian{I think presenting this table cleanly will be a challenge so we might need to have most of the data first to see how we want want to present it?}
+\begin{table*}[]
+    \centering
+    \begin{tabular}{l | rrr rrr rrr rrr rrr rrr}
+      & \multicolumn{3}{c}{T0 3B} & \multicolumn{3}{c}{CB (LoRA)} & \multicolumn{3}{c}{RTE (FT)} & \multicolumn{3}{c}{ANLI (FT)} & \multicolumn{3}{c}{Merge (Avg)} & \multicolumn{3}{c}{Remove Sentinels} \\
+      VCS & add & checkout & size & add & checkout & size & add & checkout & size & add & checkout & size & add & checkout & size & add & checkout & size \\
+      \hhline{=|==================}
+      Git LFS &&& &&& &&& &&& &&& &&& \\
+      Git Theta &&& &&& &&& &&& &&& &&&
+    \end{tabular}
+    \caption{Caption}
+    \label{tab:benchmark}
+\end{table*}
+
+\begin{table*}[]
+    \centering
+    \begin{tabular}{l l | r r}
+      Commit & Metric & Git LFS & Git Theta \\
+      \hhline{==|==}
+      T0 3B            & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      CB (LoRA)        & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      RTE (FT)         & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      ANLI (FT)        & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      Merge (Avg)      & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      \shortstack{Remove \\ Sentinels} & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+    
+    \end{tabular}
+    \caption{Caption}
+    \label{tab:benchmark}
+\end{table*}

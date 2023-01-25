@@ -1,0 +1,418 @@
+%%%%%%%% ICML 2022 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass[nohyperref]{article}
+
+% TODO: Remove when all author notes are removed.
+\usepackage[dvipsnames]{xcolor}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2022} with \usepackage[nohyperref]{icml2022} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Define \code command with monospace font that we can change later if we want
+\def\code#1{\texttt{#1}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2023}
+
+% If accepted, instead use the following line for the camera-ready submission:
+% \usepackage[accepted]{icml2023}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+\usepackage{amsthm}
+
+\usepackage{minted}
+\usepackage{hhline}
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+
+\newcommand{\brian}[1]{\textcolor{Plum}{\bf\small [\textsc{brian}:~#1]}}
+
+\newcommand{\nikhil}[1]{\textcolor{Green}{\bf\small [\textsc{nikhil}:~#1]}}
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Git-Theta}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Git-Theta: A Git Extension for Collaborative Development of \\Machine Learning Models}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2023
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Firstname1 Lastname1}{equal,yyy}
+\icmlauthor{Firstname2 Lastname2}{equal,yyy,comp}
+\icmlauthor{Firstname3 Lastname3}{comp}
+\icmlauthor{Firstname4 Lastname4}{sch}
+\icmlauthor{Firstname5 Lastname5}{yyy}
+\icmlauthor{Firstname6 Lastname6}{sch,yyy,comp}
+\icmlauthor{Firstname7 Lastname7}{comp}
+%\icmlauthor{}{sch}
+\icmlauthor{Firstname8 Lastname8}{sch}
+\icmlauthor{Firstname8 Lastname8}{yyy,comp}
+%\icmlauthor{}{sch}
+%\icmlauthor{}{sch}
+\end{icmlauthorlist}
+
+\icmlaffiliation{yyy}{Department of XXX, University of YYY, Location, Country}
+\icmlaffiliation{comp}{Company Name, Location, Country}
+\icmlaffiliation{sch}{School of ZZZ, Institute of WWW, Location, Country}
+
+\icmlcorrespondingauthor{Firstname1 Lastname1}{first1.last1@xxx.edu}
+\icmlcorrespondingauthor{Firstname2 Lastname2}{first2.last2@www.uk}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+\begin{abstract}
+Currently, most machine learning models are trained by a centralized team and are rarely updated.
+In contrast, open-source software development involves the iterative development of a shared artifact through distributed collaboration of many individuals using version control software.
+In the interest of enabling collaborative and continual improvement of machine learning models, we introduce Git-Theta, a version control system for machine learning models.
+Git-Theta is an extension to Git, the most widely used version control software, thereby allowing fine-grained tracking of changes to a model's parameters alongside code and other artifacts.
+Existing version control systems for model checkpoints treat the model as a binary blob and do not support cheaply communicable updates or merging, which are fundamentally important operations for receiving and incorporating changes from contributors.
+Git-Theta supports various existing approaches for communication-efficient updates and merging and also includes a plugin system that enables downstream users to easily add support for new functionality.
+In this paper, we introduce Git-Theta'sthe key features and design choices.
+We also include an example use-case of Git-Theta where a pre-trained model is adapted to new tasks through parameter-efficient fine-tuning, merging, and manual removal of parameters.
+We publicly release Git-Theta in hopes of kickstarting a new era of collaborative model development.\footnote{anonymized}
+\end{abstract}
+
+\section{Introduction}
+
+Over the past fifty years, software development has gone from a poorly understood and unregimented practice to a well-studied set of processes and methodologies that help ensure that software is performant, high-quality, and correctly implemented \citep{brooks1975mythical}.
+A key component of modern software development are \textit{version control systems}, which allow fine-grained tracking of changes to a piece of software.
+Version control systems also typically enable collaborative development of software by providing functionality for soliciting and incorporating changes from contributors.
+This functionality is key to the development of \textit{open-source} software, i.e.\ software whose source code is developed completely in the open.
+Open-source software underlies many key technologies, including operating systems, compilers, web servers, programming languages, and more.
+Much of this ubiquitous open-source software is developed by distributed communities of individuals who iteratively build, update, and improve the software through thousands of contributed changes.
+
+In the last few decades, machine learning models have increasingly become a key part of software systems.
+However, the development of machine learning models is often relatively primitive in comparison with software development.
+For example, in many applications of machine learning, it can be useful to update a trained model -- for example, to fix problematic behavior, to add new capabilities, or learn from newly collected data.
+While sophisticated tools like DVC,\footnote{\url{https://dvc.org/}} Weights and Biases,\footnote{\url{https://wandb.ai/}} MLFlow,\footnote{\url{https://mlflow.org/}} and the Hugging Face Model Hub\footnote{\url{https://huggingface.co/models}} provide useful functionality for keeping track of subsequent versions of a machine learning model, their usage is not widespread.
+Furthermore, all of these tools treat the machine learning model's checkpoint (i.e.\ saved parameter values) as a blob of binary data -- i.e., they are simply treated as a generic large file.
+As such, any change to any of the model's parameters incurs the same communication and storage costs as changing all of the model's parameters.
+As an additional consequence, these tools have no support for important operations involved in collaborative development such as merging independently introduced updates from different contributors.
+This lack of functionality is a major contributing factor to the fact that machine learning models are almost never built collaboratively.
+However, we are optimistic that large-scale collaboration is possible. 
+As a motivating example, there are currently over 10,000 variants of the BERT model on the Hugging Face Model Hub.
+What if the collective efforts used in these many training runs could be combined and reused?
+
+In this work, we aim to address these issues by introducing Git-Theta, a version control system that supports cheaply communicable updates as well as methods for merging updates from different contributors.
+To ensure broad applicability and long-term relevance of Git-Theta, we designed a plugin system that makes it straightforward to add new update types, merging methods, and supported checkpoint formats.
+We built Git-Theta as extension of Git, the most widely used version control system (according to the StackOverflow 2022 Developer Survey,\footnote{\url{https://survey.stackoverflow.co/2022/\#version-control-version-control-system-prof}} over 95\% of professional developers primarily use Git).
+As such, Git-Theta can be easily integrated into existing software development pipelines and allows tracking both the code and parameters of a model in the same repository.
+Compared to existing systems for tracking models that treat the checkpoint as a binary blob, Git-Theta is dramatically more communication- and space-efficient and also supports automatic merging.
+We are optimistic that these features will provide a major step forward in enabling collaborative and continual development of machine learning models.
+
+We review necessary background of Git and Git-LFS in Section~\cref{sec:background}.
+Then, in Section~\cref{sec:git_theta}, we describe Git-Theta in detail, including its motivation, usage, and implementation details.
+To ensure that Git-Theta achieves our goals, we benchmark a real-world use-case involving adaptation and improvement of the pre-trained T0 model \citep{sanh2021multitask} based on the T-Few methodology \citep{liu2022tfew} in Section~\cref{sec:benchmarking}.
+Finally, we discuss related work and future plans in \cref{x} and \cref{x} respectively.
+
+\section{Background} \label{sec:background}
+
+\subsection{Version Control with Git} \label{ssec:git}
+
+Git is an open-source version control system designed in 2005 to support collaborative development of the Linux kernel. Since then, Git has emerged as one of the most widely used version control systems, particularly in the open-source software community \cite{TODO}.
+
+In the typical Git workflow, teams host a main branch---a sequence of repository snapshots---on a centralized Git remote server (e.g., Github, GitLab, BitBucket, etc.). 
+Team members can independently contribute changes to the main branch by downloading a full copy of the repository from the remote (\code{git fetch}), committing changes locally (\code{git commit}), and sending their changes back to the remote repository (\code{git push}).
+
+Commonly, contributors to a Git repository will create a new local branch when making changes (\code{git branch}). Creating a branch allows one contributor to make a series of commits in isolation from any concurrent changes that other contributors make on the main branch. Additionally, branching makes switching between logically-separate features easy (\code{git checkout}). Once development on a branch is done, its changes are merged (\code{git merge}) into the main branch, adding a new commit to the main branch's history. Additionally, Git provides several resolution methods for merging branches that contain changes to the same files. 
+
+Internally, Git manages repositories by storing files in three logically separate locations. First is the \emph{working tree}, where files in a repository are viewed and edited by users. The second location is the \emph{staging area}, a location managed internally by Git that contains modified files that are ready to be committed. Files are placed in the staging area by Git when users run \code{git add}. Finally, after staged files are committed and a user runs \code{git push}, the committed files are stored on the \emph{Git remote}. 
+
+\subsection{Extending Git} \label{ssec:extending_git}
+Git offers several points of customization that allow external programs to extend its functionality to fit the needs of a specific project. These can be loosely divided into per-file customizations and repository-level event customizations.
+
+\subsubsection{Per-File Customization with Git Attributes}
+At specific points in the Git workflow, Git is able to delegate to external programs to customize how it handles certain files in a repository. 
+These customizations are enabled via the \code{.gitattributes} file associated with a repository. Each entry in this file is a glob pattern, defining which files the entry applies to, and a sequence of key-value pairs, representing the attributes of these files. Based on the value of an attribute, Git will either modify how it handles that file or will delegate to an external program for certain operations.. 
+%\brian{TODO: Remove the extra space above these paragraphs}
+
+
+\paragraph{The Filter Attribute}
+The \code{filter} attribute is used to customize how files are moved between the working tree and staging area.
+
+While staging a working tree file, Git passes the file to the \emph{clean filter} associated with the value of that file's \code{filter} attribute. The clean filter is a program that can perform arbitrary transformations to the working tree file, and the output of this filter is what Git \emph{actually} places in the staging area and tracks in version control.
+
+When the file is moved back from the staging area to the working tree, Git first passes the staged file to the \emph{smudge filter} associated with the file's \code{filter} attribute. The smudge filter typically has the inverse effect of the clean filter, so that the contents of the file repopulated in the working tree matches what was originally placed there by the user.
+
+Together, the clean and smudge filters allow files to appear differently to users viewing files in the working tree and the underlying version control system.
+
+
+\paragraph{The Diff Attribute}
+Git allows users to identify differences between two versions of the same file with \code{git diff}. By default, Git uses its built-in text-based diff driver to compute and display these differences. However, users can customize this behavior by specifying the \code{diff} attribute for a file. In cases where the \code{diff} attribute is set, an external diff program associated with the attribute's value is called by \code{git diff} to compute and display differences.
+
+\paragraph{The Merge Attribute}
+Git performs automated merging of files from different branches during the \code{git merge} operation. By default, Git uses its built-in text-based merge program. To customize this behavior, the \code{merge} attribute can be specified to use an external merge program.
+
+\subsubsection{Repository-level Customization with Git Hooks}
+At specific points in the Git workflow, Git can invoke external programs, called hooks, that can operate on the whole repository. For example, when a user runs \code{git commit}, Git first invokes the \emph{pre-commit} hook. After completing the commit operation, Git then calls the \emph{post-commit} hook. Analogous \emph{pre-} and \emph{post-} hooks exist for other Git operations such as \code{push} and \code{pull}. These allow external programs to inspect the files being manipulated by Git and perform additional operations alongside Git.
+
+\subsection{Large File Storage with Git LFS} \label{ssec:git_lfs}
+Git was designed to track small, text-based files, such as source code. Limited tooling for dealing with binary files and the distributed, full-copy nature of Git makes it difficult to deal with large binary files. Git Large File Storage (LFS) is a Git extension that allows users to track large binary files natively through Git. 
+
+From a high-level, Git LFS replaces the large binary files in a repository with small text files that Git is better equipped to track. Git-Theta's implementation mirrors Git LFS in many ways, and even leverages Git LFS to store model parameters. As such, we give a brief overview of Git LFS's implementation.
+
+\paragraph{Tracking Large Files}
+A large file is tracked by Git LFS with the \code{git lfs track} command. This creates a new entry in the \code{.gitattributes} file that sets the tracked file's \code{filter}, \code{diff}, and \code{merge} attributes. Additionally, Git LFS registers a pre-push hook.
+
+\paragraph{Staging Large Files}
+When an LFS-tracked file is staged, Git passes the file to the LFS clean filter. This filter copies the working tree file to \code{.git/lfs/objects/} and returns a \emph{pointer file} containing the LFS-tracked file's hash, size, and the current version of the LFS specification. Git then stores this pointer file in the staging area. Rather than tracking the version history of the large binary file, Git instead only handles the small, text-based pointer file.
+
+\paragraph{Pushing Large Files to a Remote}
+Before Git pushes a sequence of commits to a remote repository it invokes the LFS pre-push hook. This hook inspects each commit to see if any contain LFS pointer files. If any pointer files are encountered, the corresponding files in \code{.git/lfs/objects} are synced to an LFS remote server. This server is similar to a Git remote, but only stores LFS-tracked files. 
+
+Once the pre-push hook has completed, Git pushes the commits containing pointer files to the Git remote. As such, LFS-tracked files appear as pointer files when viewed in the remote repository, while the files' actual contents are stored on an LFS remote server.
+
+\paragraph{Fetching Large Files from a Remote}
+Git performs the \code{git fetch} operation normally. However, since the Git remote contains LFS pointer files in place of the actual file contents, the result of a fetch is that only the pointer files are downloaded and placed in the staging area.
+
+\paragraph{Checking Out Large Files}
+When LFS-tracked files are moved from the staging area into the working directory, Git calls the LFS smudge filter. The smudge filter takes a staged pointer file as input and checks if the corresponding large file is cached locally in \code{.git/lfs/objects/}. If the file exists locally, it is returned by the smudge filter. In cases when the file is not cached locally, the smudge filter fetches the file from the LFS remote server. Git populates the working tree with the file returned by the smudge filter.
+
+\section{Git-Theta} \label{sec:git_theta}
+\subsection{Motivation}
+While Git LFS \textit{could} be used to track the version history of a model---in fact, many other model versioning tools use Git LFS directly \cite{TODO}---it is a general-purpose tool for working with large files and cannot take advantage of the structure of ML models. This presents a number of usability issues when tracking a model's version history. 
+
+If a model is tracked by Git LFS, any small change to a model file results in a new copy of the \emph{entire} model being stored. Thus the storage requirements of the repository scale linearly with the number of model commits, independent of the number of parameters that are actually updated. This is especially problematic when using communication-efficient fine-tuning methods that update a small subset of the parameters \cite{sung2021sparse,guo2020diffpruning,zaken2021bitfit}, add a small number of new parameters \cite{liu2022tfew,hu2021lora,houlsby2019adapter,lester2021tuning,li2021prefix,mahabadi2021compacter}, or optimize the model in a low-dimensional subspace \cite{aghajanyan2020intrinsic}.
+
+Another downside of treating ML models as generic large files is that Git LFS cannot automatically merge files from different branches. Instead, Git LFS flags the files as having a merge conflict and defers to users to manually merge them. Due to its generality, Git LFS does not take advantage of existing methods for merging multiple models into a single model that combines their capabilities \cite{matena2021merging,wortsman2021robust}.
+
+Finally, being agnostic to the underlying structure of a tracked file, Git LFS cannot provide meaningful diffs between versions of a model. Instead of displaying how a model has changed at the level of an individual layer or parameter group, Git LFS can only indicate that two model files are not identical.
+
+Git-Theta addresses these deficiencies of Git LFS, to give users a simple way to efficiently and meaningfully track changes to ML models natively through Git. 
+
+\subsection{Lifecycle of a Git-Theta Model}
+% Shout-outs to Ted Chiang
+% WHo's that?
+Git-Theta's usage and implementation are perhaps best elucidated by tracking what happens to a model under Git-Theta version control. Exact details of the implementation are expanded upon in Section \ref{sec:implementation}.
+\paragraph{Tracking a Model}
+After installation, Git-Theta begins tracking a model checkpoint with the command \code{git theta track <checkpoint>}. This configures Git to use Git-Theta when handling the checkpoint by setting the file's \code{filter}, \code{diff}, and \code{merge} attributes in the \code{.gitattributes} file. 
+
+\paragraph{Staging a Model}
+Running \code{git add <checkpoint>} to stage the model triggers the Git-Theta clean filter. Internally, the clean filter uses a \code{Checkpoint} class (Section~\ref{sec:Checkpoint}) to load the framework-native checkpoint into a standardized format. It then checks whether a previous version of the model exists and identifies the parameter groups (i.e. weight matrices, bias vectors, etc.) that have been modified or added by checking the tensor's locality sensitive hash (Section~\ref{sec:LSH}).
+
+Any parameter groups that were modified or added are then passed to an \code{Update} class (Section~\ref{sec:Update}) that replaces the parameter group tensor with the smallest amount of information needed to describe how the parameter group was modified. For a full dense update of a parameter group, this results in just keeping the new parameter values. However, for communication-efficient updates like sparse or low-rank updates, this results in storing a sparse tensor or low-rank vectors.
+
+The \code{Update} class then  calls a \code{Serializer} (Section~\ref{sec:Serializer} to serialize the parameter group update as a binary blob. This serialized update is passed to the Git LFS clean filter, which stores the update in \code{.git/lfs/objects/} and returns the pointer file metadata associated with the serialized object.
+
+Finally, after processing each parameter group, the Git-Theta clean filter creates a model metadata file. This file contains per-parameter group metadata such as information about each group's tensor (i.e. shape, dtype, locality sensitive hash), the metadata produced by the LFS clean filter, and additional information such as the update type. This metadata file is what is actually staged and versioned by Git.
+
+\paragraph{Committing a Model}
+After committing a model with \code{git commit}, Git invokes the Git-Theta post-commit hook. The hook inspects the most recent commit, looking for Git-Theta model metadata files. When found, the hook processes the metadata file, looking for parameter groups that were passed to Git LFS and thus written to \code{.git/lfs/objects} as part of the commit. The hook then stores a list of these these LFS objects in \code{.git/theta/commits/<commit\ hash>}.
+
+\paragraph{Pushing a Model to a Remote}
+Just before pushing a series of commits to a remote, Git invokes the Git-Theta pre-push hook. This hook uses the data in \code{.git/theta/commits/} to find parameter groups were added or modified during these commits. The LFS objects associated with these parameters are synced to an LFS remote server with \code{git lfs push}.
+
+\paragraph{Fetching a Model from a Remote}
+Git performs the \code{git fetch} operation normally. However, since the Git remote contains a Git-Theta metadata file in place of the actual model, the result of a fetch is that only the metadata file is downloaded and placed in the staging area.
+
+\paragraph{Checking Out a Model}
+During operations like \code{git checkout}, the Git-Theta metadata file is moved from the staging area to the working directory. During this process Git passes the metadata file to the Git-Theta smudge filter. 
+
+For each parameter group, Git-Theta uses the \code{Update} class to load the actual parameter value, asynchronously. To do so, the \code{Update} reads the metadata for a parameter group, and passes the LFS metadata to the Git LFS smudge filter to retrieve the serialized update from either  \code{.git/lfs/objects} or the LFS remote server.  The \code{Serializer} is used to convert the serialized update back into tensors. If the update being loaded depends on previous parameters (e.g., a low-rank update that is applied on top of previous parameters), the \code{Update} recursively loads the previous version of the parameter group.
+
+After each parameter group has been  have been loaded, the Git-Theta smudge filter uses the \code{Checkpoint} class to convert the collection of parameter groups back into a framework-native checkpoint. Git then places this reconstituted checkpoint in the working tree.
+
+\paragraph{Merging Models From Different Branches}
+When merging commits that have made modifications to the same model, Git-Theta's custom merge driver is used. The driver loads the model metadata file from both branch as well as their common ancestors. When merge conflicts are detected a menu is shown to the user of possible merge resolutions. The ``Merge'' the user selects merges the weight and it is added to the merged model. Finally the merged model is output and Git commits it.
+
+\paragraph{Diffing Models}
+
+\subsection{Implementation} \label{sec:implementation}
+
+Git customization implements Inversion of Control \brian{cite}. Users design custom modules but do not control when they are executed, that is controlled by the framework, Git. Git-Theta is designed similarly. Control flow for core functionality, like clean and smudge, are defined by Git-Theta, but the actual implementations are handled by plugins. Git-Theta leverages Python's \brian{cite} entry-point based plug-in system. While Git-Theta ships with plug-ins---described below---that support many common frameworks, end-users can define their own to handle custom workflows. Vague terms above, like ``Checkpoint'' represent these plug-ins.
+
+\paragraph{Checkpoints}
+
+\brian{I have been using ``a collection'', is something like ``a map of names to weights'' or ``a map of weights better?''.}
+The first type of plug-in Git Theta supports is the ``Checkpoint''. During the clean filter, a checkpoint plugin is responsible for loading a framework-native checkpoint and converting it into a collection of weights. During the smudge filter, the checkpoint converts the collection of weights to the framework-native checkpoint format.
+
+Git-Theta currently supports Pytorch \brian{cite}, Tensorflow \brian{cite}, Flax \brian{cite/TODO}, and T5X \brian{cite} checkpoints. \brian{Finish the t5x plugin}.
+
+% \brian{Are these useful? Maybe go to the appendix? They aren't the exact API but convey the meaning}
+% \brian{Need to fix overflow}
+% \begin{minted}[fontsize=\footnotesize]{Python}
+% ParameterMap = Dict[Tuple[str, ...], Parameter]
+
+% class Checkpoint:
+%   @property
+%   def name(self):
+%       """The name of the Checkpoint plug-in, used for loading."""
+
+%   @classmethod
+%   def load(cls, checkpoint_path: str) -> ParameterMap:
+%       """Load framework-native checkpoint and convert to a collection of weights."""
+
+%   def save(self, weights: ParameterMap, checkpoint_path: str):
+%       """Save the weight collection to a framework-native checkpoint."""
+% \end{minted}
+% \label{lst:checkpoint}
+
+\paragraph{Updates}
+
+The responsibility of update plug-ins is the reading and writing of a weight. The API of an Update plug-in include an \code{apply} method which gets the weight value after applying this update and a \code{write} method which saves the weight value to disk. The simplest update type is a ``Dense'' update where the weight found in the checkpoint is written directly to disk during the clean filter and the weight is returned exactly as is it on the disk during the smudge filter.
+
+Additionally Git-Theta supports Incremental Updates where the value of a parameter depends on it's previous value. During the \code{apply} method, an Incremental Update uses the model metadata to see what was the last update applied and when did it happen in the Git history and based on that it creates a new Update plug-in. The previous value is then obtained by calling recursively calling the \code{apply} method on this new Update plug-in. In turn, new Update plug-in may also require the previous value. When this happen it follows the same process to create and use another new Update plug-in. The recursion repeats until an Update like ``Dense'' is reached that does not require previous values and returns a real weight to its caller. The weight travels back up the call stack as updates receive the previous value and apply their update to it until finally the original update plug-in is reached. At each step in this recursive chain, each actual weight value comes from some commit in the Git History meaning Git-Theta does not need to manage multiple versions directly. Currently Incremental Updates support a linear history and the implementation is based composite pattern \brian{cite}---Incremental Updates have the same API as updates like Dense that end the recursive chain.
+
+Git-Theta currently supports sparse, where only a few parameters within a weight, and low-rank, where the update to a weight $\in \mathbb{R}^{M \times N}$ is broken into two $\in \mathbb{R}^{M \times K}, \mathbb{R}^{K \times N}$, updates where $K$ is small.
+
+% \begin{minted}[fontsize=\footnotesize]{python}
+% class Update:
+
+%   @property
+%   def name(self):
+%       """The name of the Update plug-in, used for loading."""
+
+%   def write(self, param: Parameter) -> LfsMetadata:
+%       """Write the parameter to disk and return metadata required for reading."""
+
+%   def apply(self, param: ParamMetadata) -> Parameter:
+%       "Load the parameter."""
+% \end{minted}
+
+\paragraph{Serializers:} The only serializer currently in use is Tensorstore \brian{cite}.
+
+\paragraph{Merges}
+
+Merge Plug-in are used when multiple commits change the same weight in a model. For each merge conflict, the Git-Theta merge driver dynamically builds menu of plug-ins. Merge plug-ins help populate this menu by providing a summary of what they do, what keyword should be used to select them, and what kinds of weight merge conflicts they are able to resolve---allowing the driver to build a menu with only relevant plug-ins.
+
+Git-Theta currently supports resolving merge conflicts by using the change from the current branch, using the change from the other branch, using the change from the ancestor (i.e. throwing away both changes), and averaging the parameters from each branch.
+
+
+\paragraph{Locality Sensitive Hash}
+\label{sec:LSH}
+
+When a weight is unchanged since the previous commit Git-Theta avoid storing a new copy. To avoid loading the model twice when comparing to previous parameters Git-Theta uses the weight metadata to compare. Mismatches in things like shape or dtype immediately signal that the weight has changed. To check if the content is unchanged Git-Theta compares parameter hashes. Na\"{i}vely hashing the underlying bytes is unreliable. A single change in byte order from things like different machines or different library versions result in a completely different hash value. Additionally, when using Incremental Updates, where the final value is computed on the fly, numerical noise from different implementations or parallelism can introduce tiny differences in parameter values. These errors are small enough that they do not effect results when used in Machine Learning models \brian{cite}, but do result in hash mismatches.
+
+To avoid this issue, Git-Theta hashes parameters using a Locality Sensitive Hash (LSH) \brian{cite}. An LSH will hash similar items to the same same value and provide probabilistic bounds on false positives. Git-Theta uses an LSH that approximates Euclidean distance based on bucketed projection of each point onto a line \brian{cite}. Additionally, the random pool approach from \brian{citet} is used to allow the LSH to hash weights of different sizes. The Euclidean LSH is $(d_1, d_2, p_1, p_2)$ \brian{TODO: Fill this in} sensitive, that is, if $\text{distance}(x, y) \leq d_1$ then $\Pr[h(x) = h(y)] \geq p_1$ and \brian{finish explanation, convert to math operators?}.
+
+\brian{Add false negative bounds}
+Git-Theta's LSH is calibrated so that two weights that have a Euclidean distance less than \brian{TODO} then they will have the same hash with a probability of at least \brian{TODO}. As a safety precaution, weights that have a Euclidean distance $\in [, ]$ \brian{TODO} are checked with \code{np.allclose} before deciding if they match or not.
+
+\section{Benchmarking} \label{sec:benchmarking}
+
+To test the efficacy of Git Theta's approach to model versioning, we compare to versioning with Git LFS in a reasonable community development flow.
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centerline{\includegraphics[width=\columnwidth]{figures/benchmark-graph.pdf}}
+\caption{Git commit graph representing our benchmark. Starting from a pre-trained T0 3B model, it was updated using LoRA on CB, forked and then trained on RTE, trained on ANLI, and merged via parameter averaging. Finally, pretraining sentinel tokens were removed. All training was done in the few-shot setting.}
+\label{fig:commit-graph}
+\end{center}
+\vskip -0.2in
+\end{figure}
+
+We start with a pretrained model, T0 3B \brian{cite} that is tracked with version control. We then do few-shot training on CB \brian{cite} using LoRA \brian{cite}. \brian{It would be helpful to have Haokun add some details}. The low rank updates from LoRA were integrated backing into the model weight so there was no change to the structure of the model. On a branch, fine-tuning was used to train the model using the few-shot RTE \brian{cite} dataset. Concurrently on the main branch, we did few-shot training on ANLI r-1 \brian{cite}. The RTE trained model was merged back into main-line development using parameter averaging \cite{}. Finally, we removed the T5 \cite{} pre-training sentinel tokens from the vocabulary to ensure the model would not output them. Training hyper-parameters can be found in Section \brian{TODO}. Figure~\ref{fig:commit-graph} provides an overview of this development workflow.
+
+After each training session the model was added and committed to two repositories, one using Git LFS for version control and the other using Git Theta. As many model version control system either leverage Git LFS directly or use a similar implementation---one blob per checkpoint, we only compare to Git LFS.
+
+At each commit we compare: the wall-clock time for a \code{git add}, essentially how long the clean filter takes, the wall-clock time for a \code{git checkout}---how long the smudge filter takes---and a the size of the objects stored on disk. Data transferred is also an important metric but eventually all checkpoint files need to be pushed to the remote so the on-disk size is a good proxy for the amount of data set over the network. Git LFS, and by extension Git Theta, use file hashing to avoid sending redundant data over the wire. Similarly upload/download times are strongly correlated to file size, and differences would mostly amount to uncontrolled variance in the network.
+
+Table~\ref{tab:benchmark} shows the results for each version control system.
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centerline{\includegraphics[width=\columnwidth]{figures/benchmark-perf.pdf}}
+\caption{Model performance at different points in commit history.}
+\label{fig:perf}
+\end{center}
+\vskip -0.2in
+\end{figure}
+
+
+\brian{I think presenting this table cleanly will be a challenge so we might need to have most of the data first to see how we want want to present it?}
+\input{tables/benchmarking.tex}
+
+\section{Future Work}
+
+\bibliography{refs}
+\bibliographystyle{icml2023}
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022. 
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.

@@ -1,0 +1,37 @@
+\section{Experimental Setup}
+% To study our proposed algorithms, we run extensive experimentation.
+
+\paragraph{Models}
+% (1) What models do we use?
+For our experiments, we utilize encoder-decoder models from the T5 family of pre-trained models \cite{raffel2020t5}. Specifically, we experiment with LM-adapted T5 (T5-LM) and T0. The T5-LM model, from \citet{lester-etal-2021-power}, further trains the T5.1.1 model for 100,000 steps (corresponding to 100B tokens) from the C4 dataset on prefix language modelling objective (i.e.\ predicting the following text based on a prefix). The T0 model is initialized from the T5-LM model and further trained on a multitask mixture of prompted datasets as described by \citet{sanh2022multitask}.
+We repeat each experiment with the T5-LM XL (hereafter T5-XL) and T0-3B models (both using the same architecture with 2.85 billion parameters) as starting checkpoints (from Hugging Face Transformers~\citep{wolf-etal-2020-transformers}).
+% We use the base-sized T5-LM (248 million parameters), XL-sized T5-LM, and T0-3B models (both 2.85 billion parameters).
+% We repeat each experiment twice by initializing from T5-XL and T0-3B checkpoints from Hugging Face Transformers \citep{wolf-etal-2020-transformers}.
+
+% (2) What target tasks do we use?
+\paragraph{Target Datasets}
+We obtain all datasets from Hugging Face Datasets\footnote{https://huggingface.co/datasets}, and cast them to the text-to-text format by applying prompt templates from the Public Pool of Prompts (P3) \citep{bach-etal-2022-promptsource} that was used to train T0.
+To evaluate our few-shot methods, we utilize the same held-out datasets as T0, which cover four distinct tasks: \textbf{sentence completion} (COPA~\citep{gordon-etal-2012-semeval}, HellaSwag~\citep{zellers-etal-2019-hellaswag}, Story Cloze~\citep{sharma-etal-2018-tackling}), \textbf{natural language inference} (ANLI~\citep{nie-etal-2020-adversarial},~CB \citep{Marneffe2019TheCI}, RTE~\citep{10.1007/11736790_9}), \textbf{coreference resolution} (WSC~\citep{levesque2012winograd}, Winogrande~\citep{winogrande}), and \textbf{word sense disambiguation} (WiC~\citep{pilehvar-camacho-collados-2019-wic}). For each dataset, we randomly sample five few-shot splits from their training data, containing the same number of training examples as previous works, between 20 to 70 \citep{NEURIPS2020_1457c0d6,liu2020tfew}. We further divide each split into equal training and validation partitions. Only ANLI datasets have a publicly available test set, so for all other datasets we evaluate models on the validation set (not utilized for few-shot training or validation). For all datasets, we report the mean and standard deviation of accuracy across splits.
+
+% (3) How do we determine the auxiliary tasks?
+\paragraph{Auxiliary Datasets}
+We evaluate the performance of our methods using two sets of auxiliary data and never include any of the target datasets as part of auxiliary data.
+First, we use the collection of datasets used to train T0 (henceforth referred to as T0Mix), including 35 unique datasets covering the tasks of question answering, sentiment analysis, topic classification, summarization, paraphrase detection and structure-to-text.
+Second, we utilize all datasets in P3 (which forms a superset of T0Mix) and, to prevent data leakage, filter out those datasets that overlap with any target dataset, leading to 260 available datasets. For each auxiliary dataset, we use at most 10,000 of the dataset's examples.
+
+\paragraph{Training Details}
+% Learning rate? 1e-4, 3e-4
+% Value of G? 4 or 16 or comparably, batch sizes of 32 and 128
+For direct fine-tuning, we use learning rates in $\{1e$-$4, 3e$-$4\}$ and select the best model based on validation score. For all other methods, we always use a learning rate of $1e-4$. For direct fine-tuning and FLAD baselines, we use batch sizes in $\{32,128\}$. For \ex{}-FLAD and \ucb{}-FLAD we use mini-batches of 8 samples, and let $G$ be in $\{4,16\}$ to match the batch size of other methods. For all experiments we use the Adafactor optimizer~\citep{pmlr-v80-shazeer18a} and validation-based early stopping.
+
+% (8) Shared training details for mixed training, exp3, and ucb1
+% Details: preliminary training with t5-base (not lm adapted) on subset of tasks gave scores of 0.4427, 0.4447, 0.4545, 0.4562 for full model, encoder, decoder, lm head, respectively.
+In preliminary experiments we consider rewards using gradients from various model partitions: the full model weights, encoder-only weights, decoder-only weights, and the weights of the output vocabulary matrix (language modelling head). We find that using the parameters from the language modelling head provides the best performance and contains only 2.3\% of the full model parameters, significantly reducing memory consumption.
+% (7) Training details specific to Exp3
+% (8) Training details specific to UCB1
+For \ucb{}-FLAD we found the smoothing factor $\beta=0.9$ to work well in preliminary experiments and initialize auxiliary dataset gradient alignment using 1,000 samples.
+
+% base model has hidden size 768, and vocab of 32128 = 24,674,304 parameters in LM head
+% 3b model has hidden size 2048, and vocab of 32128 = 65,798,144 parameters in LM head
+
+More implementation details, including hyperparameters, can be found in Appendix~\ref{sec:implementation_details}

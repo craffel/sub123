@@ -1,0 +1,89 @@
+\section{Background}
+In this section we first informally describe the few-shot learning with auxiliary data (FLAD) problem. Then, we present and define the goals of the multi-armed bandit setting. Next, we present the adversarial bandit setting, connect it to FLAD, and review the \ex{} algorithm \citep{auer2002nonstochastic} used to solve it. Finally, we present the \ucb{} algorithm \citep{auer2002finite}, used to solve a more constrained MAB setting.
+
+% Intro to FLAD, which version of FLAD are we focused on
+\subsection{Few-shot Learning with Auxiliary Data}
+% FLAD is a broad category
+Few-shot learning with auxiliary data (\textbf{FLAD}) aims to improve generalization when training on a small quantity of target data $\mathcal{D}_{\mathcal{T}}$ by making use of a much larger quantity of (possibly) related auxiliary data $\mathcal{D}_{\mathcal{A}}$. The auxiliary data may be labeled or unlabeled, be cleanly differentiated as separate datasets/tasks, or many other properties. The goal of FLAD is to optimize a model for the distribution underlying $\mathcal{D}_{\mathcal{T}}$.
+
+Under this definition, a great deal of prior work can be seen to focus on FLAD.
+Some past work sets up training in stages, such as STILTS~\citep{phang2018sentence}, meta-learning~\citep{bansal-etal-2020-self}, or multi-task learning~\citep{aghajanyan-etal-2021-muppet}, where the first stage generally uses all of the auxiliary data equally and the second stage includes only the target data. Other approaches have utilized retrieval-augmented models that match auxiliary data to large quantities of unlabeled target data such as in ReCross~\citep{Lin2022UnsupervisedCG} and DEFT~\citep{Ivison2022DEFT}. Alternatively, some works scale the loss of auxiliary datasets as in~\citet{Verboven2022}, or include unsupervised auxiliary data as in~\citet{deryAANG2022}.
+
+To narrow down the set of methods that we consider for satisfying our desiderata, we focus on the setting where -- crucially -- the final stage of training includes simultaneous training on both supervised auxiliary and target data. Henceforth, we use FLAD to refer specifically to this setting.
+
+
+% Brief intro to MAB
+\subsection{Multi-Armed Bandits}
+
+The Multi-Armed Bandit (\textbf{MAB}) setting is a problem from machine learning where a learner interacts with an environment over $N$ rounds by following a policy $\pi$. At each round $t$ the learner chooses one of the environment's $K$ arms, $a\in\mathcal{A}$ where $K=\vert\mathcal{A}\vert$, after which the environment provides a reward $R_{t}$. Rewards for unplayed arms are not observed. The goal of the learner is to adopt a policy $\pi$ that selects actions that lead to the largest cumulative reward over $N$ rounds, $R=\sum_{t=1}^{N}R_{t}$.
+% To evaluate a policy, regret is calculated as the difference between the total expected reward of an optimal policy and the total expected reward collected by the learner \alon{either don't mention regret if not used elsewhere, or include more information on regret}.
+In this work we assume a finite $K$ and that the underlying reward distribution of each arm may have a variety of properties (e.g.\ stochasticity or stationarity) depending on the exact scenario, leading to differing optimal policies~\citep{lattimore_szepesvári_2020}.
+
+% Adversarial MAB and Exp3
+\paragraph{Adversarial MAB}
+% Adversarial MAB details
+The adversarial MAB setting assumes that the reward-generating process is controlled by an adversary. This assumption allows for modelling non-stationary and highly stochastic reward signals.
+% and makes almost no assumptions about the reward-generating process.
+We will later show why our FLAD formulation fits into this setting.
+% This is opposed to the previously discussed setting for the \ucb{} algorithm, which makes an assumption that rewards are gaussian random variables, and the mean reward of individual arms are (mostly) stationary.
+Under this setting, it is assumed that an adversary is given access to the learner's policy $\pi$ and determines the sequence of rewards, $(R_{a,t})_{t=1}^{N}$, for each arm prior to play \citep{auer1995gambling}. At each turn $\pi$ determines a distribution over actions, $p(\mathcal{A})$, and an action is sampled from the distribution, $a\sim p(\mathcal{A})$.
+See \citet{lattimore_szepesvári_2020} for further details.
+
+% Background on EXP3
+\paragraph{The \ex{} Algorithm}
+The \ex{} algorithm (``Exponential-weight algorithm for Exploration and Exploitation'') targets the adversarial multi-armed bandit problem \citet{auer2002nonstochastic} by choosing arms according to a Gibbs distribution based on the empirically determined importance-weighted rewards of arms. To allow for exploration, \ex{} mixes the Gibbs distribution with a uniform distribution.
+
+% Importance weighting and Gibbs distribution formulation
+Formally, let the exploration rate be $\gamma \in (0,1]$. At round $t$, $\pi$ defines the probability of selecting a given arm, $a\in\mathcal{A}$, as a linear combination of Gibbs and uniform distributions
+\begin{equation}
+\label{eq:exp3_sampling}
+    p_{t}(a) = (1-\gamma)\dfrac{\exp(\gamma\hat{R}_{a,t-1}/K)}{\sum_{a\prime}\exp(\gamma \hat{R}_{a\prime,t-1}/K)}+\frac{\gamma}{K}
+\end{equation}
+where the importance weighted reward $\hat{R}_{a,t}$ is calculated as 
+\begin{equation}
+\label{eq:importance_weighted_reward}
+    \hat{R}_{a,t} = \hat{R}_{a,t-1} + \frac{R_{a,t}}{p_{t-1}(a)}
+\end{equation}
+and $R_{a,t}$ denotes the observed reward. All unplayed arms, $a\prime\neq a$ have unchanged importance weighted rewards; $\hat{R}_{a\prime,t}=\hat{R}_{a\prime,t-1}$.
+
+% Algorithm
+Algorithmically, \ex{} takes the following steps at each round. First, calculate the sampling distribution $p_{t}$ and sample an arm from the distribution. Then a reward $R_{a,t}$ is observed and the algorithm updates the importance weighted reward $\hat{R}_{a,t}$ for the played arm.
+
+Informally, the use of an importance-weighted estimated reward compensates the rewards of actions that are less likely to be chosen, guaranteeing that the expected estimated reward is equal to the actual reward for each action. \ex{} is designed to be nearly optimal in the worst case, but due to the exploration rate it will select ``bad'' actions at a rate of $\gamma / K$. The exploration of \ex{} combined with importance-weighting allows the policy to handle non-stationary reward-generating processes.
+
+% UCB1 algorithm, regret, optimality, etc.
+\paragraph{The \ucb{} Algorithm}
+% Background on UCB
+While the adversarial setting makes almost no assumptions about the reward-generating process and therefore maintains its performance guarantees under almost any circumstances, it can be outperformed in settings that \textit{are} constrained. In this section we assume that the reward generating processes are stationary Gaussian distributions.
+% While we will later see that this is not a guarantee in the FLAD setting, we will show that weakened versions of these assumptions hold.
+A common policy used to solve this MAB problem is the Upper Confidence Bound (\ucb{}) algorithm, which assigns each arm a value called the upper confidence bound based on Hoeffding's inequality~\citep{auer2002finite}. The \ucb{} algorithm is based on the principle of \textit{optimism in the face of uncertainty}, meaning that with high probability the upper confidence bound assigned to each arm is an overestimate of the unknown mean reward.
+
+% Upper confidence bound formulation
+Formally, let the estimated mean reward of arm $a$ after being played $n_{a}$ times be $\hat{R}_{a}$ and the true mean reward be $R_{a}$, then
+\[
+\mathbb{P}\bigg(R_{a} \ge \hat{R}_{a} + \sqrt{\frac{2\ln (1/\delta)}{n_{a}}}\bigg) \le\delta \quad\forall \delta\in (0,1)
+\]
+derived from Hoeffding's inequality (following equation 7.1 of~\citet{lattimore_szepesvári_2020}), where $\delta$ is the confidence level that quantifies the degree of certainty in the arm. In this work we let $\delta = 1/t$ where $t$ is the number of rounds played, shrinking the confidence bound over rounds. Thus, we define the upper confidence bound for arm $a$ at turn $t$ as
+\begin{equation}
+\label{eq:ucb}
+UCB_{a,t} = 
+\begin{cases}
+\infty,& \text{if } n_{a}=0 \\
+\hat{R}_{a}+\sqrt{\frac{2\ln t}{n_{a}}},& \text{otherwise}
+\end{cases}
+\end{equation}
+
+% Algorithm
+Algorithmically, \ucb{} takes the following steps at each round. First, the \ucb{} policy plays the arm with largest upper confidence bound, $a^{*}=\arg\max_{a\in\mathcal{A}}UCB_{a,t}$. Next a reward, $R_{a^{*},t}$, is observed and the algorithm updates $\hat{R}_{a^{*}}$ (the estimated mean reward for $a^{*}$) and the upper confidence bounds for all $a$. Informally, this algorithm suggests that the learner should play arms more often if they either 1.\ have large expected reward, $\hat{R}$, or 2.\ $n_{a}$ is small because the arm is not well explored.
+
+% Regret
+% The \ucb{} algorithm has a worst-case regret of $O(\sqrt{K n \ln n})$.
+
+% Weighting method
+% Given a target dataset $\mathcal{D}_{\mathcal{T}}$, with limited samples, $K$ labeled auxiliary datasets, $\mathcal{D}_{\mathcal{T}}$, and a model $\mathit{f}_{\theta}$, the goal of FLAD is to train $\mathit{f}$ to achieve high performance on the target dataset by simultaneously minimizing the losses
+% \[
+% \mathcal{L}_{\mathcal{A}\cup\mathcal{T}} = w_{\mathcal{T}}\mathcal{L}_{\mathcal{T}} + \sum_{a\in\mathcal{A}}w_{a}\mathcal{L}_{a}
+% \]
+% where the weights, $w_{\mathcal{T}},w_{\mathcal{a}}$, are determined by a policy. The policy can be fixed prior to training, adjusted on a predetermined schedule, or learned in an online fashion. In this definition we make no assumptions about the quality of auxiliary data with regards to transfer to the target dataset.
+% \alon{Maybe this entire subsection isn't required? State FLAD in it's simplest terms and then move on!}
+% Describe multi-task learning and meta-learning under this framework?

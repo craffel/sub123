@@ -1,0 +1,16 @@
+\section{Discussion}
+
+\paragraph{Efficiency}
+\alon{How do our algorithms do in terms of space-complexity?}
+\alon{How do our algorithms do in terms of computational complexity?}
+
+% Design choices that may be leading to suboptimal performance:
+% At each turn, our algorithms choose an auxiliary dataset, calculate the gradient, and after G rounds will use that gradient to update the model. There is likely an approach to filtering out poor gradients that will improve model performance
+% We consider a very simple reward function that can be computed very efficiently in an online algorithm, but previous works on multi-armed bandits for training neural networks have utilized more complicated rewards such as in \citet{graves2017automated}. It is likely that our reward function can be improved upon, especially based on our findings of the dynamics of task similarity throughout training.
+
+% Gradient similarity as a proxy for success
+% We have formulated our reward based on gradient similarity between an auxiliary dataset and the target dataset. In an extreme case, if the auxiliary data has exactly the same gradient as the target data, our algorithms would heavily prefer this data, possibly leading to the exact same training outcome as directly fine-tuning on the target data alone. This would not be an ideal situation, but we make the assumption that our auxiliary data will never have identical gradients to the target. \alon{This assumption may be too obvious, good candidate for removal.}
+
+% Because Exp3 makes fewer assumptions on the reward generating distribution, it proves to be a more general solution to bandit algorithms, and therefore likely to not be the best policy. We find that UCB1 leads to better performance, suggesting that there may be some properties of our setting that we do not know, and with further analysis of the training dynamics, we may be able to create an algorithm with improved properties and maybe even guarantees.
+
+% Reward function, we only consider gradient similarity, what else would be reasonable?

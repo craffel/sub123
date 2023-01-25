@@ -1,0 +1,46 @@
+\begin{table*}[]
+    \centering
+    \begin{tabular}{l | rrr rrr rrr rrr rrr rrr}
+      & \multicolumn{3}{c}{T0 3B} & \multicolumn{3}{c}{CB (LoRA)} & \multicolumn{3}{c}{RTE (FT)} & \multicolumn{3}{c}{ANLI (FT)} & \multicolumn{3}{c}{Merge (Avg)} & \multicolumn{3}{c}{Remove Sentinels} \\
+      VCS & add & checkout & size & add & checkout & size & add & checkout & size & add & checkout & size & add & checkout & size & add & checkout & size \\
+      \hhline{=|==================}
+      Git LFS &&& &&& &&& &&& &&& &&& \\
+      Git Theta &&& &&& &&& &&& &&& &&&
+    \end{tabular}
+    \caption{Caption}
+    \label{tab:benchmark}
+\end{table*}
+
+\begin{table*}[]
+    \centering
+    \begin{tabular}{l l | r r}
+      Commit & Metric & Git LFS & Git Theta \\
+      \hhline{==|==}
+      T0 3B            & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      CB (LoRA)        & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      RTE (FT)         & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      ANLI (FT)        & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      Merge (Avg)      & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+      \hline
+      \shortstack{Remove \\ Sentinels} & add      & & \\
+                       & checkout & & \\
+                       & size     & & \\
+    
+    \end{tabular}
+    \caption{Caption}
+    \label{tab:benchmark}
+\end{table*}

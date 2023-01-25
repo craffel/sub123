@@ -1,0 +1,116 @@
+\appendix
+
+\section{Implementation Details}
+\label{sec:implementation_details}
+% (5) Training details specific to direct fine-tuning
+% (6) Training details specific to exploration-only and exploitation-only methods
+% (7) Training details specific to Exp3
+% (8) Training details specific to UCB1
+% Smoothing factor - initially experimented with 0,99, 0.9, 0.8, 0.5. Seemed like 0.9 was a happy medium for most target datasets.
+
+% learning rates, gradient accumulation steps, batch sizes
+\alon{Fill in hyperparameters here.}
+\section{More Training Details}
+For all experiments, we use validation-based early stopping, and train for a maximum of 10,000 gradient update steps. In practice, we find that early-stopping leads to significantly fewer than 10,000 updates, usually between 50-150 for direct fine-tuning, and 1-2,000 for other methods.
+
+For the smoothing factor, $\beta$, in \ucb{}-FLAD we ran preliminary experiments using values of $\{0.99, 0.9, 0.75, 0.5\}$ and found 0.9 to work well across datasets. All reported scores use $\beta=0.9$.
+
+In preliminary experiments we consider rewards using gradients from multiple model partitions: the full model, encoder-only, decoder-only, and language modelling head (token classifier). We find that using the parameters from the LM head provides best performance, followed by the decoder-only, encoder-only, and full model gradients. The differential from best to worst method was $\sim3\%$ relative performance. Recall that with a gradient accumulation factor of $G$, our algorithms need to store at most $G+1$ gradients at any time. So not only does using the LM head provide performance improvements, but also saves memory. For the models we use, the LM head contains only 2.3\% of the full model parameters.
+
+\section{Which portion of the language model should be used to compare gradients?}
+In our initial experiments with T5-base, we compared the use of different model partitions for gradient comparisons. We considered the use of the full model gradient, encoder-only, decoder-only, and language modelling layer. We found that using the language modelling layer only performed the best (~3\% better than using the entire model), with the decoder layers and encoder layers also outperforming the full model by 2.6\% and 0.5\%, respectively.
+While these findings seems to suggest that using the language modelling layer is best, when looking at individual tasks, we find that this is not true for 3/8 tasks (story cloze, wic, and winogrande). These 3 tasks 
+
+
+wic is words-in-context, using intermediate representation is probably better than just token probabilities.
+Story cloze and winogrande are tasks which require commonsense knowledge.
+
+Other tasks may be more focused on linguistic features rather than semantics. ANLI is nli, CB is also NLI, copa is selection of sentence completions (relies on some commonsense, and also linguistic features). hella swag is commonsense NLI. rte is also NLI, 
+
+
+\section{Things we didn't try - rephrase this}
+In this work, we define the action reward of selecting an auxiliary dataset to be the cosine similarity between the auxiliary batch gradient and the target task gradient. Using different similarity/distance measures may prove to be useful as well, such as an $L_{2}$ or $L_{1}$ distance. Similarly, gradient directions are not necessarily the best proxy for dataset similarity. Furthermore, in this work we make the assumption that dataset similarity is the objective to be optimized, but this may not be the best metric to optimize for.
+
+\section{Full Results}
+\label{sec:appendix_results}
+
+
+\begin{table}
+\centering
+\small
+\label{tab:detailed_results}
+\caption{Detailed results from the main experiment including direct fine-tuning, exploration-only, exploitation-only baselines and our proposed methods, \ex{}-FLAD and \ucb{}-FLAD.}
+\begin{adjustbox}{angle=-90}
+\begin{tabular}{|lrr|r|r|r|r|r|r|r|r|r|r|r|r|r}\toprule
+\multicolumn{3}{r|}{Dataset} &Anli-r1 &Anli-r2 &Anli-r3 &CB &COPA &HellaSwag &RTE &Story Cloze &WiC &Winogrande &WSC &Average \\
+\hline
+&\multicolumn{2}{r|}{Direct Fine-Tuning} &37.6 &36.2 &35.0 &83.2 &53.8 &51.0 &54.2 &75.9 &51.6 &49.6 &53.1 &52.8 \\
+\multirow{8}{*}{T5-3B} &\multirow{ 4}{*}{T0Mix} &Exploration-Only &38.1 &40.3 &36.7 &88.6 &85.6 &51.2 &67.6 &88.8 &51.0 &55.5 &47.7 &59.2 \\
+& &Exploitation-Only &38.8 &40.5 &38.0 &86.1 &86.0 &51.1 &69.4 &89.5 &52.8 &59.2 &46.3 &59.8 \\
+& &Exp3-FLAD &40.6 &39.9 &36.9 &86.1 &\textbf{89.8} &\textbf{52.0} &76.7 &90.8 &50.5 &60.3 &52.9 &61.5 \\
+& &UCB1-FLAD &41.8 &39.0 &38.0 &85.4 &87.0 &\textbf{52.0} &79.1 &91.4 &49.7 &62.7 &56.2 &62.0 \\
+\cmidrule{2-15}
+& \multirow{4}{*}{P3} &Exploration-Only &40.1 &37.7 &36.0 &85.4 &83.6 &\textbf{52.1} &77.3 &89.1 &51.5 &57.2 &57.1 &60.6 \\
+& &Exploitation-Only &40.4 &37.2 &37.3 &87.1 &84.4 &51.0 &78.6 &90.3 &51.3 &56.2 &51.5 &60.5 \\
+& &Exp3-FLAD &46.9 &38.8 &40.2 &89.6 &88.0 &51.5 &76.9 &91.2 &53.4 &66.2 &61.9 &64.1 \\
+& &UCB1-FLAD &49.1 &38.8 &40.1 &88.6 &88.2 &51.6 &83.7 &90.2 &\textbf{54.3} &\textbf{68.0} &68.3 &65.5 \\
+\hline
+ &\multicolumn{2}{r|}{Direct Fine-Tuning} &40.9 &39.1 &37.1 &79.6 &66.4 &43.5 &67.1 &83.2 &52.5 &54.6 &56.7 &56.4 \\
+\multirow{8}{*}{T0-3B} &\multirow{ 4}{*}{T0Mix} &Exploration-Only &44.4 &40.3 &37.0 &82.5 &85.6 &47.9 &77.6 &90.1 &52.1 &58.6 &56.9 &61.2 \\
+& &Exploitation-Only &42.5 &39.3 &37.2 &84.3 &82.8 &48.1 &79.7 &88.8 &52.8 &57.8 &56.3 &60.9 \\
+& &Exp3-FLAD &46.2 &41.5 &37.7 &83.9 &87.6 &49.4 &80.0 &90.1 &52.6 &63.4 &59.0 &62.9 \\
+& &UCB1-FLAD &43.7 &40.8 &37.6 &86.1 &85.4 &48.6 &80.5 &91.3 &53.4 &63.5 &61.0 &62.9 \\
+\cmidrule{2-15}
+&\multirow{4}{*}{P3} &Exploration-Only &45.4 &40.3 &38.0 &82.5 &87.8 &50.6 &82.2 &88.8 &52.4 &61.8 &60.6 &62.8 \\
+& &Exploitation-Only &45.5 &40.0 &38.8 &87.5 &82.2 &49.9 &79.6 &90.9 &52.2 &60.1 &64.8 &62.9 \\
+& &Exp3-FLAD &\textbf{50.4} &40.0 &\textbf{41.2} &87.9 &88.4 &49.7 &\textbf{86.1} &\textbf{91.6} &52.8 &67.5 &70.4 &66.0 \\
+& &UCB1-FLAD &48.2 &\textbf{41.8} &\textbf{41.2} &\textbf{90.0} &86.6 &50.0 &\textbf{86.1} &\textbf{91.5} &53.6 &65.6 &\textbf{74.6} &66.3 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\clearpage
+
+\section{\ex{}-FLAD and \ucb{}-FLAD Training Dynamics}
+\label{sec:training_dynamics}
+The following 4 pages include a case study on the training dynamics of \ex{}-FLAD and \ucb{}-FLAD when training T5-XL using T0Mix as the auxiliary data. First, we find datasets where \ex{}-FLAD and \ucb{}-FLAD improve significantly over the baseline FLAD methods, but also where either \ex{}-FLAD or \ucb{}-FLAD clearly outperforms the other. The two datasets that fulfill our interests are RTE and COPA.
+
+We find that \ucb{}-FLAD outperforms \ex{}-FLAD on RTE, and show their respective training dynamics in Figure~\ref{fig:ucb_rte} (\ucb{}) and Figure~\ref{fig:ex_rte} (\ex{}).
+We find that \ex{}-FLAD outperforms \ucb{}-FLAD on COPA, and show their respective training dynamics in Figure~\ref{fig:ucb_copa} (\ucb{}) and Figure~\ref{fig:ex_copa} (\ex{}).
+
+We include details and takeaways in the caption for each figure. For \ex{}-FLAD figures we include charts of the cumulative estimated reward, empirical gradient alignment, instantaneous sampling distribution determined by the policy, and the empirical sampling distribution determined by the total number of samples seen per dataset as a fraction of the total samples seen. For \ucb{}-FLAD figures, we include charts of the upper confidence index, estimated gradient alignment, and the empirical sampling distribution.
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/UCB1_dynamics_rte.pdf}
+    \caption{Training dynamics of \ucb{}-FLAD, a case study using RTE as target dataset and T0Mix as auxiliary data, where \ucb{}-FLAD outperforms. Colored lines are a sample of auxiliary datasets with interesting properties, the remaining datasets are shown in grey.}
+    \label{fig:ucb_rte}
+\end{figure*}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/EXP3_dynamics_rte.pdf}
+    \caption{Training dynamics of \ex{}-FLAD, a case study using RTE as target dataset and T0Mix as auxiliary data. Colored lines are a sample of auxiliary datasets with interesting properties, the remaining datasets are shown in grey.}
+    \label{fig:ex_rte}
+\end{figure*}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/UCB1_dynamics_copa.pdf}
+    \caption{
+    Training dynamics of \ucb{}-FLAD, a case study using COPA as target dataset and T0Mix as auxiliary data. Colored lines are a sample of auxiliary datasets with interesting properties, the remaining datasets are shown in grey.
+    We find that although qasc and quartz start with very high gradient alignment, they very quickly fall to below - 0 alignment (middle figure, green and yellow). In the end, we find that the algorithm samples much more from qasc than from quartz (bottom figure).
+    Interestingly, we find that although both cnn\_dailymail and multi\_news start off with very negative gradient alignment, they quickly become the most aligned with the target task (middle figure, blue and red).
+    We find that the three auxiliary datasets with highest upper confidence index (top figure) and largest sampling percent (bottom figure) are cnn\_dailymail, multi\_news, and trec even though these all considered dissimilar to the target prior to training.
+    }
+    \label{fig:ucb_copa}
+\end{figure*}
+
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/EXP3_dynamics_copa.pdf}
+    \caption{Training dynamics of \ex{}-FLAD, a case study using COPA as target dataset and T0Mix as auxiliary data. Colored lines are a sample of auxiliary datasets with interesting properties, the remaining datasets are shown in grey.}
+    \label{fig:ex_copa}
+\end{figure*}

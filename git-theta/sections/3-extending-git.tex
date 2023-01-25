@@ -1,0 +1,54 @@
+\section{Extending Git} \label{sec:extending_git}
+Git offers several points of customization that allow external programs to extend its functionality to fit the needs of a specific project. These can be loosely divided into per-file customizations and repository-level event customizations.
+
+\subsection{Per-File Customization with Git Attributes}
+At specific points in the Git workflow, Git is able to delegate to external programs to customize how it handles certain files in a repository. 
+%Per-file customization allows Git to delegate to external programs when performing certain actions in the Git workflow. 
+These customizations are enabled via the \code{.gitattributes} file associated with a repository. Each entry in this file is a glob pattern, defining which files the entry applies to, and a sequence of key-value pairs, representing the attributes of these files. Based on the value of an attribute, Git will either modify how it handles that file or will delegate to an external program for certain operations.. 
+%\brian{TODO: Remove the extra space above these paragraphs}
+%\brian{Does this small paragraph work better after the description of the drivers we use?}
+
+\paragraph{The Filter Attribute}
+The \code{filter} attribute is used to customize how files are moved between the working tree and staging area.
+%One attribute used by Git is the \code{filter} attribute, which customizes how files are moved between the working tree and staging area. 
+While staging a working tree file, Git passes the file to the \emph{clean filter} associated with the value of that file's \code{filter} attribute. The clean filter is a program that can perform arbitrary transformations to the working tree file, and the output of this filter is what Git \emph{actually} places in the staging area and tracks in version control.
+
+When the file is moved back from the staging area to the working tree, Git first passes the staged file to the \emph{smudge filter} associated with the file's \code{filter} attribute. The smudge filter typically has the inverse effect of the clean filter, so that the file repopulated in the working tree matches the file originally placed there by the user.
+
+Together, the clean and smudge filters allow files to appear differently to users viewing files in the working tree and to the underlying version control system.
+
+% \paragraph{Filter Drivers:} When moving files between the working directory and the staging area, Git exposes it's first customization point---filter drivers. When a file is moved to the staging area the ``clean filter'' can be invoked. The clean filter can perform arbitrary transformations on the file and its output is placed in the staging area. Ultimately, the cleaned file is what is actually tracked by the version control system. Inversely, when a file is moved from the staging area to the working directory (i.e., during \code{git checkout}) a ``smudge filter'' can be invoked. The smudge receives the cleaned file as input and the outputs is placed in the working directory.
+
+\paragraph{The Diff Attribute}
+Git allows users to identify differences between two versions of the same file with \code{git diff}. By default, Git uses its built-in text-based diff driver to compute and display these differences. However, users can customize this behavior by specifying the \code{diff} attribute for a file. In cases where the \code{diff} attribute is set, an external diff program associated with the attribute's value is called by \code{git diff} to compute and display differences.
+
+\paragraph{The Merge Attribute}
+Git performs automated merging of files from different branches during the \code{git merge} operation. By default, Git uses its built-in text-based merge program. To customize this behavior, the \code{merge} attribute can be specified to use an external merge program.
+
+\subsection{Repository-level Customization with Git Hooks}
+At specific points in the Git workflow, Git can invoke external programs, called hooks, that can operate on the whole repository. For example, when a user runs \code{git commit}, Git first invokes the \emph{pre-commit} hook. After completing the commit operation, Git then calls the \emph{post-commit} hook. Analogous \emph{pre-} and \emph{post-} hooks exist for other Git operations such as \code{push} and \code{pull}. These allow external programs to inspect the files being manipulated by Git and perform additional operations alongside Git.
+
+% Git is a flexible version control system that provides many ways to customize and extend its behavior to fit the needs of a specific project. In this section, we discuss a few of these extensions that are used in Git-Theta's implementation.
+
+% \subsection{Filter Drivers}
+% \begin{itemize}
+%     \item Git filter drivers are programs that are invoked when files are being moved by Git between the working directory and the staging area
+%     \item Filter drivers implement two operations: clean and smudge
+%     \item When a file is being moved from the working directory to the staging area (for example during \code{git add}), the contents of the file are first passed to the clean filter. The clean filter can perform an arbitrary transformation to the file, and its output is what ultimately gets placed in the staging area.
+%     \item The smudge filter typically performs the inverse operation of the clean filter. When Git moves a file from the staging area to the working directory (e.g., during \code{git checkout}), the contents of the staged file get passed to the smudge filter and the output of the smudge filter is what Git places in the working directory.
+%     \item When a filter driver is defined, it can be limited to only be run for files matching a specified glob pattern (e.g., \code{*.txt}).
+% \end{itemize}
+% \subsection{Diff and Merge Drivers}
+% \begin{itemize}
+%     \item Git comes equipped with it's own text-based diff and merge programs for displaying the difference between two versions of a file and for merging two different versions of the same file.
+%     \item However, Git can be configured to use external diff and merge programs, and external diff and merge tools can be designated to only run for files matching a specified glob pattern.
+% \end{itemize}
+
+% \subsection{Git Hooks}
+
+% \begin{itemize}
+%     \item Git hooks are programs that are invoked by Git at specific points in the Git workflow.
+%     \item For instance, when a user runs \code{git commit}, Git will first run the pre-commit hook, then perform the actual commit, and lastly run the post-commit hook. Analogous pre- and post-command hooks exist for many other git operations such as \code{push}, \code{pull}, etc.
+% \end{itemize}
+
+

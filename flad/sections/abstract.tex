@@ -1,0 +1,17 @@
+\begin{abstract}
+% What are we trying to do and why is it relevant?
+Few-shot learning involves learning an effective model from only a few labeled datapoints.
+Avoiding overfitting to the small training dataset leads to a difficult learning setting but also makes few-shot learning applicable to many important real-world settings.
+% where collecting labeled data is difficult.
+In this work, we focus on \textbf{F}ew-shot \textbf{L}earning with \textbf{A}uxiliary \textbf{D}ata (FLAD), a training paradigm that assumes access to auxiliary data during few-shot learning in hopes of improving generalizability.
+% Why is this hard?
+Introducing auxiliary data during few-shot learning leads to essential design choices
+% , such as determining how to mix auxiliary and target data,
+where hand-designed heuristics can lead to sub-optimal performance. 
+% How do we solve it? What's our contribution
+In this work, we focus on automated sampling strategies for FLAD and relate them to the explore-exploit dilemma that is central in multi-armed bandit settings.
+Based on this connection we propose two algorithms, \ex{}-FLAD and \ucb{}-FLAD, and compare them with methods that either explore or exploit finding that the combination of exploration \textit{and} exploitation is crucial.
+% How do we verify that our contributions have solved it?
+Using our proposed algorithms to train T5 yields a 9\% absolute improvement over the explicitly multi-task pre-trained T0 model across 11 datasets.
+\alon{Mention something about analysis here.}
+\end{abstract}

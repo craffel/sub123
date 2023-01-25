@@ -1,0 +1,12 @@
+\section{Example Usage of Git-Theta}
+\brian{I don't think we need this section, a lot of it is captured in the lifecycle section or will happen in the benchmarking section}
+May be good to go through a full example of how to use Git-Theta to illustrate the API
+\begin{itemize}
+    \item \code{git theta install}
+    \item \code{git theta track}
+    \item \code{git add} and \code{git theta add}
+    \item \code{git commit}
+    \item Make a modification and then run \code{git diff}
+    \item \code{git merge} with some new model state on the main branch
+    \item \code{git push}
+\end{itemize}

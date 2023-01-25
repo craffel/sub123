@@ -1,0 +1,37 @@
+\section{Git-Theta Motivation}
+While Git LFS \textit{could} be used to track the version history of a model---in fact, many other model versioning tools use Git LFS directly \cite{TODO}---it is a general-purpose tool for working with large files and cannot take advantage of the structure of ML models. This presents a number of usability issues when tracking a model's version history. 
+
+%\nikhil{A big part of Git-Theta's value prop is that PEFT is something people do (or should do) a lot. Let's really emphasize this by citing a lot of PEFT and sparse updates work here. @muqeeth and @haokun probably know this work the best}
+
+If a model is tracked by Git LFS, any small change to a model file results in a new copy of the \emph{entire} model being stored. Thus the storage requirements of the repository scale linearly with the number of model commits, independent of the number of parameters that are actually updated. This is especially problematic when using communication-efficient fine-tuning methods that update a small subset of the parameters \cite{sung2021sparse,guo2020diffpruning,zaken2021bitfit}, add a small number of new parameters \cite{liu2022tfew,hu2021lora,houlsby2019adapter,lester2021tuning,li2021prefix,mahabadi2021compacter}, or optimize the model in a low-dimensional subspace \cite{aghajanyan2020intrinsic}.
+
+Another downside of treating ML models as generic large files is that Git LFS cannot automatically merge files from different branches. Instead, Git LFS flags the files as having a merge conflict and defers to users to manually merge them. Due to its generality, Git LFS does not take advantage of existing methods for merging multiple models into a single model that combines their capabilities \cite{matena2021merging,wortsman2021robust}.
+
+Finally, being agnostic to the underlying structure of a tracked file, Git LFS cannot provide meaningful diffs between versions of a model. Instead of displaying how a model has changed at the level of an individual layer or parameter group, Git LFS can only indicate that two model files are not identical.
+
+Git-Theta addresses these deficiencies of Git LFS, to give users a simple way to efficiently and meaningfully track changes to ML models natively through Git. 
+
+% To Git LFS, each tracked file is just a binary blob, meaning that any small change to a model file results in a new copy of the \emph{entire} model being stored. Thus the storage requirements of the repository scale linearly with the number of commits, independent of the number of parameters that are actually updated.  With the recent rise of parameter-efficient methods, such as prompt-tuning \cite{lester2021tuning}, $\textrm{IA}^3$ \cite{liu2022tfew}, and adapters \cite{houlsby2019adapter}, it is critical to be able to version a model while only tracking the few parameters that do change.
+
+% Git Theta is able to break a ML model into its constituent weights and uses Git LFS to store each one. This enables storage on the LFS remote, local caching, and parsimonious network traffic.
+
+% Git LFS's inability to leverage the fact that ML models are made up of multiple parameters means that it cannot provide meaning diffs between versions of the model, instead it just states that the hash has changed. On the other hand, Git Theta is able to provide meaning diffs, including information about which parameters changed and by how much.
+
+% Similarly, Git LFS is not able to provide an effective merge conflict resolution. Users cannot be expected to merge two files by looking at their binary blobs, and even if they could, the merged result would not match the pointer file hash. Being parameter aware allows Git Theta to have a tractable merge resolution experience. Git Theta provides the user multiple options to merge each parameter that has a conflict. Several recent methods for merging neural network parameters, such as parameter averaging \brian{cite} and Fisher-weighted averaging \brian{cite} are included. Git Theta builds a merged model as each parameter-wise conflict is resolved and finally commits the merged model.
+
+% In addition to only storing the changed weights in a commit, the type of update used can be leveraged to create an even more communication efficient artifact. For example, a sparse update that only changes representation of a few tokens in the embedding table can store just the changed vectors instead of the whole embedding table.:w
+
+
+% \begin{itemize}
+    % \item Git LFS \textit{could} be used to track the version history of a model, but there are downsides to using it for this purpose. 
+    
+    % \item Any kind of update to a model, including parameter efficient updates (e.g., sparse, low-rank, adapter), would result in the \emph{entire} model being stored as a new version. Over time, the repository size would scale linearly with the number of commits rather than the number of the parameters being updated.
+    
+    % \item Git LFS is a general-purpose tool for handling large files through Git. Due to its generality it cannot take advantage of the structure of ML models to produce meaningful diffs between versions of a model or resolve merge conflicts between two versions.
+
+    % \item From a high-level, Git-Theta is a Git extension that uses Git LFS to store each of a model's parameter groups (e.g., weight matrices, bias vectors, etc.) separately. 
+    
+    % \item Additionally, it is update-type-aware so that structured updates to parameter groups (e.g., sparse or low-rank updates) store only the parameters needed to produce the update (e.g., the sparse values and indices or low-rank vectors) rather than the entire updated parameter group.
+
+    % \item Since Git-Theta is specially designed for tracking ML models, it can provide meaningful diffs between versions of a model, indicating which parameter groups were modified, added, or removed. Additionally, leveraging recent work on merging the parameters of neural networks, Git-Theta implements merging conflict resolution strategies such as parameter averaging and Fisher-weighted averaging.
+% \end{itemize}

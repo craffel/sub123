@@ -1,0 +1,33 @@
+\section{Large File Storage with Git LFS}
+Git was designed to track small, text-based files, such as source code. Limited tooling for dealing with binary files and the distributed, full-copy nature of Git makes it difficult to deal with large binary files. Git Large File Storage (LFS) is a Git extension that allows users to track large binary files natively through Git. 
+
+From a high-level, Git LFS replaces the large binary files in a repository with small text files that Git is better equipped to track. Git-Theta's implementation mirrors Git LFS in many ways, and even leverages Git LFS to store model parameters. As such, we give a brief overview of Git LFS's implementation.
+
+\paragraph{Tracking Large Files}
+A large file is tracked by Git LFS with the \code{git lfs track} command. This creates a new entry in the \code{.gitattributes} file that sets the tracked file's \code{filter}, \code{diff}, and \code{merge} attributes. Additionally, Git LFS registers a pre-push hook.
+
+\paragraph{Staging Large Files}
+When an LFS-tracked file is staged, Git passes the file to the LFS clean filter. This filter copies the working tree file to \code{.git/lfs/objects/} and returns a \emph{pointer file} containing the LFS-tracked file's hash, size, and the current version of the LFS specification. Git then stores this pointer file in the staging area. Rather than tracking the version history of the large binary file, Git instead only handles the small, text-based pointer file.
+
+% Git Large File Storage (LFS) extends Git to be able to handle large, often non-text-based, files. Since Git-Theta is built on top of Git LFS, in this section we give a brief overview of how Git LFS is implemented using the extensions described in Section \ref{sec:extending_git}.
+
+% \subsection{Clean Filter}
+% When Git stages a file tracked by Git LFS (often referred to as an object), it first passes the file to the LFS clean filter. The clean filter reads the file and returns a lightweight pointer file containing the file's hash, size in bytes, and the version of the Git LFS specification used to create the pointer file (maybe reference a figure here that shows an example). This pointer file is what Git actually moves to the staging area, rather than the large working directory file. In addition, to creating this pointer file, the clean filter copies the working directory file into \code{.git/lfs/objects/}.
+
+\paragraph{Pushing Large Files to a Remote}
+Before Git pushes a sequence of commits to a remote repository it invokes the LFS pre-push hook. This hook inspects each commit to see if any contain LFS pointer files. If any pointer files are encountered, the corresponding files in \code{.git/lfs/objects} are synced to an LFS remote server. This server is similar to a Git remote, but only stores LFS-tracked files. 
+
+Once the pre-push hook has completed, Git pushes the commits containing pointer files to the Git remote. As such, LFS-tracked files appear as pointer files when viewed in the remote repository, while the files' actual contents are stored on an LFS remote server.
+
+% \subsection{Pre-Push Hook}
+% Just before pushing a sequence of commits to a Git remote, the Git LFS pre-push hook inspects all files in the commits to see if any are Git LFS pointer files. If any pointer files are found, the corresponding objects in \code{.git/lfs/objects} are synced to the Git LFS remote server. The Git LFS remote is analogous to a Git remote, but stores only the large files tracked by Git LFS. When viewing a remote repository containing LFS-tracked files, the Git remote will contain pointer files in place of the LFS-tracked files.
+
+\paragraph{Fetching Large Files from a Remote}
+Git performs the \code{git fetch} operation normally. However, since the Git remote contains LFS pointer files in place of the actual file contents, the result of a fetch is that only the pointer files are downloaded and placed in the staging area.
+
+\paragraph{Checking Out Large Files}
+When LFS-tracked files are moved from the staging area into the working directory, Git calls the LFS smudge filter. The smudge filter takes a staged pointer file as input and checks if the corresponding large file is cached locally in \code{.git/lfs/objects/}. If the file exists locally, it is returned by the smudge filter. In cases when the file is not cached locally, the smudge filter fetches the file from the LFS remote server. Git populates the working tree with the file returned by the smudge filter.
+
+
+% \subsection{Smudge Filter}
+% When Git moves a file tracked by Git LFS from the staging area into the working directory, it first passes the file to the LFS smudge filter. The smudge filter reads the staged pointer file and looks up whether the corresponding object exists locally in \code{.git/lfs/objects/}. If the object exists locally, the smudge filter returns this object. In cases where the object is not available locally, the smudge filter requests the object from the LFS remote, stores the object in \code{.git/lfs/objects}, and then returns the object back to Git. Git then populates the working directory with the object returned by the smudge filter.

@@ -1,0 +1,764 @@
+%%%%%%%% ICML 2023 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+\usepackage{caption}
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2023} with \usepackage[nohyperref]{icml2023} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2023}
+
+% If accepted, instead use the following line for the camera-ready submission:
+% \usepackage[accepted]{icml2023}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+
+
+\usepackage{adjustbox}
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Soft Merging of Experts with Adaptive Routing}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Soft Merging of Experts with Adaptive Routing}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2023
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Firstname1 Lastname1}{equal,yyy}
+\icmlauthor{Firstname2 Lastname2}{equal,yyy,comp}
+\icmlauthor{Firstname3 Lastname3}{comp}
+\icmlauthor{Firstname4 Lastname4}{sch}
+\icmlauthor{Firstname5 Lastname5}{yyy}
+\icmlauthor{Firstname6 Lastname6}{sch,yyy,comp}
+\icmlauthor{Firstname7 Lastname7}{comp}
+%\icmlauthor{}{sch}
+\icmlauthor{Firstname8 Lastname8}{sch}
+\icmlauthor{Firstname8 Lastname8}{yyy,comp}
+%\icmlauthor{}{sch}
+%\icmlauthor{}{sch}
+\end{icmlauthorlist}
+
+\icmlaffiliation{yyy}{Department of XXX, University of YYY, Location, Country}
+\icmlaffiliation{comp}{Company Name, Location, Country}
+\icmlaffiliation{sch}{School of ZZZ, Institute of WWW, Location, Country}
+
+\icmlcorrespondingauthor{Firstname1 Lastname1}{first1.last1@xxx.edu}
+\icmlcorrespondingauthor{Firstname2 Lastname2}{first2.last2@www.uk}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+\begin{abstract}
+Sparsely-activated neural networks with conditional computation learn to route their inputs through different ``expert'' subnetworks, providing a strong structural prior and reducing computational costs.
+Despite their possible benefits, models with learned routing often underperform their parameter-matched densely-activated counterparts as well as models that use non-learned heuristic routing strategies.
+In this paper, we hypothesize that these shortcomings stem from the gradient estimation techniques used to train sparsely-activated models with non-differentiable discrete routing decisions.
+To address this issue, we introduce \textbf{S}oft \textbf{M}erging of \textbf{E}xperts with \textbf{A}daptive \textbf{R}outing (SMEAR), which avoids discrete routing by using a single ``merged'' expert constructed via a weighted average of the experts' parameters.
+SMEAR incurs a negligible increase in computational costs while facilitating standard gradient-based training.
+We empirically validate that the routing strategies learned via typical gradient estimation techniques underperform hand-designed heuristic strategies and that SMEAR outperforms both.
+We also provide analysis demonstrating that the experts learned via SMEAR exhibit a significant amount of specialization.
+\end{abstract}
+
+\section{Introduction}
+
+% \textit{First, set a nice looking scene as quickly as possible. Trend to scale model and data, then models with conditional computation. then gradient estimators.}
+% Make introduction from broad to specific. 
+Neural networks typically use all of their parameters to process an example.
+This means that the computational cost of a neural network is often directly related to the number of parameters it has.
+However, there are cases where it might be appropriate to use a model architecture where different parts of the model are active for different inputs.
+Such an architecture can decouple the computational cost of a model from the number of parameters that it has.
+This possibility is increasingly useful given the current trend of scaling up models \citep{kaplan2020scaling} because there may be cases where it is beneficial to train a model with more parameters but it is prohibitively expensive to train a typical densely-activated neural network \citep{fedus2021switch}.
+Separately, specializing different parts of the model to different types of data may reduce interference and allocate capacity more effectively across downstream tasks \citep{sanh2021multitask, wei2021finetuned, zamir2018taskonomy, bao2021beit} or languages \citep{pires2019multilingual, liu2020multilingual, xue2020mt5}.
+
+% Scaling up the number of parameters\citep{} in models has become a main driving force in advancing pretrained models, resulting in models with more than a hundred billion parameters\citep{}. However, computation costs grow with the parameter count, making their research exclusive and application restrictive. So, there is a need to decouple the scale of parameters and computation. 
+
+% Concurrent with the trend to scale up is scale wide. \textit{(Pick representive works, from three perspectives: nlp downtream tasks, multilingual corpus, vision downstream tasks)} From blahblah\citep{} to blahblah\citep{}, from blahblah\citep{} to blahblah\citep{}, models cover increasingly diverse ranges of data. Therefore, it's common to expect that not all parameters are necessary for a specific input instance. \textit{(Maybe cite some BERTology/Pruning works instead of making suspiciously empty claims?)}
+
+\textit{Conditional computation} techniques provide a possible way to attack these issues because they allow the network to selectively apply only a subset of its parameters to an input.
+A common way to use conditional computation is to introduce specialized subnetworks called \textit{experts} that are controlled by \textit{routers} that decide which experts should be active.
+As a result, a model with many experts can have a large number of parameters while incurring a lower computational cost by selecting a small number of experts to activate.
+When the model is trained with diverse data, this form of conditional computation can allow experts to specialize to different types of inputs while allowing flexible knowledge sharing across experts \citep{ma2019snr}.
+However, because routing involves making a discrete decision as to which expert to use, the loss on final prediction cannot back-propagate though the routing decision to update the router. 
+Consequently, models with conditional computation often require gradient estimation techniques for training \citep{jang2016categorical, clark2022unified, fedus2021switch, bengio2013estimating}.
+
+\begin{figure*}
+\centering
+{\includegraphics[width=0.9\linewidth]{figures/smear.pdf}\label{fig:smear_vs_cc}}
+\caption{The discrete routing decisions commonly used in models that route activations among experts requires the use of gradient estimation (left). We propose SMEAR (right), which uses a given router's distribution to average the parameters of the corresponding experts and then routes the input through a single merged expert. SMEAR achieves better performance than models with discrete routing, can be trained with standard backpropagation, and does not incur significant additional computational costs compared to discrete routing.}\label{fig:smear_vs_cc}
+\end{figure*}
+
+
+% \textit{This is paragraph two, something negative. Doubts on the effectiveness of sparsely activated models}
+In practice, past work has shown models with conditional computation do not always learn effective routing strategies.
+For example, \citet{mittal2022modular} investigate models with a continuous router in a controlled setting and find the models do not route examples from the same group to the same experts, and perform poorly compared to models with oracle routing.
+However, models with task-specific modules \citep{gururangan2021demix, kudugunta2021beyond} provide evidence that it is possible to train performant models with specialized experts.
+As an extreme example, \citet{roller2021hash} achieves results comparable to learned routing with a fixed random routing.
+% This implies that learned routing might not be learning a meaningful solution.  % Fix
+Relatedly, \citet{fedus2021switch} find the gain from scaling up parameters by 30$\times$ with a sparsely-activated model is smaller than scaling up both parameters and FLOPs by 3$\times$ in a dense model.
+% Relatedly, \citet{switch} find that a 7.4B parameter model with conditional computation underperforms a 770M parameter model with similar architecture and training data.
+As a possible explanation, \citet{clark2022unified} characterize how models with conditional computation improve with scale and find a detrimental term that scales with the product of the log number of experts and active parameters.
+Consequently, increasing the number of experts yields limited returns and existing methods for training conditional computation models may only be helpful when the number of active parameters is moderate.
+% In practice, the limit is so prominent that the sparse Switch-Base model scaled up to 7.4B parameter still performs worse than the dense 770M parameter T5-Large model, despite having similar architecture and training data.
+% As a result, many works shun learning to route and resort to heuristic routing strategies. % add some examples after sorting out the related works, e.g. Branch-Train-Merge, Demix, early day MOEs, adapter fusion.
+
+% \textit{Third paragraph. What we did. First heuristic routing, then estimator.}
+In this work, we hypothesize that issues with conditional computation stem from difficulties with gradient estimation.
+Specifically, we design experimental settings where we can compare learned routing to a performant hand-designed heuristic routing scheme.
+We find that all gradient estimation techniques that we consider produce models that underperform the heuristic routing, even in cases where a better routing strategy than the hand-designed one is possible.
+To address this shortcoming, we introduce \textbf{S}oft \textbf{M}erging of \textbf{E}xperts with \textbf{A}daptive \textbf{R}outing (SMEAR), a method for training models with specialized experts and learned routing.
+SMEAR works by using the router's distribution over experts to compute a weighted average of the parameters of the individual experts.
+Activations are then sent through the \textit{merged} expert, which results in a similar computational cost to discrete routing to a single expert.
+However, the fact that all components of SMEAR are fully differentiable enables standard gradient-based training.
+Empirically, we show that SMEAR significantly outperforms discrete routing solutions found via gradient estimation as well as hand-designed heuristic routing schemes without incurring a significant increase in computational costs.
+We also qualitatively validate that the experts learned by SMEAR specialize to different types of inputs.
+Put together, our results show that SMEAR provides an effective alternative for models that use adaptive routing among expert subnetworks.
+
+% \textit{Fourth paragraph, outline.}
+% After providing the background on conditional computation models and gradient estimators in the following section, we thoroughly investigate the behavior and characteristics of learned routing in \cref{sec:results}.
+After providing the background on conditional computation models and gradient estimators in the following section, we define SMEAR in \cref{sec:smear}.
+We then describe our experimental findings in \cref{sec:setup}, discuss related works in \cref{sec:related} and conclude in \cref{sec:conclusion}.
+
+\section{Background}
+\label{sec:background}
+
+To provide the necessary background for our work, we first explain how sparsely-activated neural networks use conditional computation, then discuss gradient estimators that enable learning routing strategies.
+In addition, we define the notion of ``heuristic'' routing strategies in settings where a performant routing can be hand-designed.
+
+\subsection{Routing Among Experts}
+
+In models that use discrete routing among experts (i.e.\ subnetwork modules), experts are typically organized into blocks and are incorporated into deep neural network architectures. 
+An expert routing block $B$ comprises a set of $N$ experts $\{f_1, f_2, \dots f_N\}$ and a router $R$. 
+Experts in the same block accept inputs of the same dimensionality.
+Given a hidden-state representation $u$, the output of the $i$-th expert with parameters $\theta_i$ is $f_i(u, \theta_i)$.  
+In our work, the router chooses a single $f_i$ to process the input of the block (though sparsely-activated models in other work may use more than one expert \citep{shazeer2017outrageously, du2022glam}). % produces a subset of $F$ to decide the active subnetworks $R(x) \subseteq F$. 
+%Finally, the aggregation operation $S$ takes the output of the chosen subnetwork and produces the output for the block.
+Thus we can use the block $B$ like any multi-layer building block in a neural network. % consider changing "building block" to layer
+% In most cases, $S$ is simply summation, but some gradient estimators leverage different designs. 
+
+\subsection{Gradient Estimators}
+\label{sec:estimators}
+
+In sparsely-activated models that involve discrete adaptive routing, it is not possible to train the router's parameters with standard gradient-based learning.
+Fortunately, gradient estimators can provide approximate gradients to the router parameters.
+There are a few common designs shared by models that use gradient estimators to train routers. 
+Their router $R$ often applies a lightweight network to some intermediate hidden states $v$ in the model rather than the original input to the full model. 
+The lightweight routing network yields a probability distribution $P(v)$ over all the $N$ experts. 
+Different gradient estimators vary in how they make the routing decision from P and how they construct the output from the chosen expert. 
+Additionally, some estimators may introduce additional loss terms.
+
+\paragraph{REINFORCE}
+Gradients can be estimated through discrete operations through reinforcement learning techniques \citep{schulman2015gradient, bengio2013estimating}.
+In reinforcement learning, a policy loss is used to train an agent to learn optimal actions in an environment. 
+In this paper, we experiment with the REINFORCE algorithm which computes the policy loss as $\log(\pi) r$ where $r$ denotes the received reward for taking an action whose assigned probability is $\pi$.
+When applied to models that use discrete routing among experts, the goal is to train the model to choose which expert to use to process a given input. 
+Here, the router $R$ acts an agent that samples an expert to use according to the routing probabiltiies.
+In order to train such a router, the router's assigned probability to the sampled expert is used as $\pi$ and the negative of the model's loss is used as the reward $r$.
+The router is therefore trained to pick experts that maximize the reward which, in turn, minimizes the loss.
+The REINFORCE estimator often suffers from high variance because of the sampling operation. 
+This motivates the use of baselines, which reduce variance without changing the optimal solution.
+% As a result, most works used some kind of learned baselines to prevent high variance. 
+In our work, we use a baseline introduced by \citet{clark2022unified}, where the baseline $b$ is generated by a small neural network with a single hidden layer that takes as input $v$ and is trained with Huber loss.
+The overall loss function is then
+\begin{align}
+\label{eq:reinforce_estimator_eq}
+    L = \;&\mathbb{E}_{i \sim P(v)} \alpha \log P(v)_i (r - b) - \\
+    &\beta P(v) \log P(v) + \gamma L_{\text{Huber}}(r,b)
+\end{align}
+where $P(v)$ is the routing probability distribution and $\alpha$, $\beta$, and $\gamma$ are hyperparameters that correspond to policy gradient weight, policy entropy weight, and value loss weight. 
+Finally, the output of the block $B$ is just $f_i(u, \theta_i)$.
+
+\paragraph{Straight Through Gumbel-Softmax (ST-Gumbel)}  
+% \textit{Explain the router, aggregation operation}
+The Gumbel-Softmax trick \citep{jang2016categorical} provides a continuous differentiable approximation to sampling from a categorical distribution like the one produced by a router.
+Specifically, Gumbel noise is added to the logits of the distribution and a temperature scale is applied in the softmax operation.
+Denoting $g_i \sim \text{Gumbel(0, 1)}$ and $\tau$ as the temperature, the Gumbel-Softmax trick produces the following modified distribution:
+\begin{equation}
+\label{eq:st_gumbel_estimator_eq}
+    \hat{P}(v)_i = \frac{\exp((\log(P(v)_i) + g_i)/\tau)}{\sum_{j = 1}^N \exp((\log(P(v)_i) + g_i)/\tau)}
+\end{equation}
+The expert $f_i$ with the highest assigned probability is chosen by applying an $\text{argmax}$ operation over this distribution.
+In order to approximate gradients through the $\text{argmax}$ operation, we use the Straight-Through estimator which replaces $f_i(u, \theta_i)$ with $(1 - \text{sg}[\hat{P}(v)_i] + \hat{P}(v)_i) f_i(u, \theta_i)$ where $\text{sg}$ stands for the stop-gradient operator.
+During forward pass, the multiplier for $f_i(u, \theta_i)$ becomes 1 and the multiplier receives gradients for the term $\hat{P}(v)_i$ in the backward pass.
+In practice, the temperature $\tau$ is gradually annealed from a high to low value so that the approximated samples are more and more similar to discrete samples.
+
+\paragraph{Top-$k$}
+\citet{shazeer2017outrageously} propose a gradient estimation scheme where the router sends the input through the $k$ experts that are assigned the highest probability.
+\citet{fedus2021switch} later found that this router could be used effectively when $k = 1$. 
+Specifically, the estimator selects the subnetwork with the highest probability and scales its output using its corresponding routing probability.
+The output of the block is therefore $P(v)_i f_i(u, \theta_i)$, where $i= \mathrm{argmax}_i (P(v))$.
+
+\subsection{Heuristic Routing}
+\label{sec:heuristic}
+
+As a point of comparison for techniques that learn adaptive routing, we experiment with three baseline routing strategies that do not require a trained router.
+% Heuristic routing is a simpler alternative to learned routing.
+% If we have prior knowledge about the data that a model will be applied to, it can be possible to hand-design a heuristic routing strategy for choosing which subnetworks to use for a given example.
+% In this work, we focus on three heuristic routing strategies.
+
+\paragraph{Tag Routing}
+If we have prior knowledge about the data that a model will be applied to, it can be possible to hand-design a heuristic routing strategy for choosing which experts to use for a given example based on data properties.
+Tag routing takes advantage of tags associated with the examples (such as its domain or task in multitask learning) and associates each expert in a given expert routing block with a particular tag.
+In this work, we assume each example has a single tag.
+As such, examples are routed to the expert corresponding to their tag.
+
+\paragraph{Hash Routing}
+\citet{roller2021hash} propose hash routing, which uses a fixed hashing function to determine which expert to use for a given example.
+Specifically, each example is assigned a random expert choice in each expert routing block which is used consistently over the course of training.
+This approach disregards any shared characteristics across examples.
+
+\paragraph{Monolithic Routing}
+As a baseline, we consider models where each expert routing block only has a single expert.
+This provides an important point of comparison as it is a degenerate solution that can be found with learned routing by having the router always choose the same expert for all examples.
+
+\section{Soft Merging of Experts with Adaptive Routing}
+\label{sec:smear}
+As we will later show in \cref{sec:setup}, the gradient estimation techniques used to train models with discrete routing among experts often fail to produce performant routing strategies.
+Our goal in this work is therefore to explore whether it is possible to train models with adaptive routing among experts without resorting to gradient estimation.
+Ideally, we would be able to design an expert and router architecture that facilitates standard gradient-based training so that the model could be trained end-to-end in a standard fashion.
+
+\paragraph{Ensemble Routing}
+
+One simple idea would be to pass the input of a given expert routing block through \textit{every} expert, and then compute an average of the experts' outputs weighted according the router's distribution, i.e.\ exactly computing $\mathbb{E}_{i \sim P(v)} f_i(u, \theta_i)$.
+We refer to this approach as an \textit{ensemble} routing strategy since it corresponds to using the ensemble prediction of the experts.
+Since the operations involved in computing the average are all differentiable, using an ensemble routing strategy would allow for exact computation of gradients and end-to-end-learning.
+Unfortunately, such an approach would incur a significant increase in computational costs because it requires computing the output of every expert rather than a single expert.
+
+\paragraph{Merging Experts}
+To explore an alternative fully-differentiable expert routing block, we take inspiration from recent work on \textit{merging} models \citep{matena2021merging,wortsman2022model,wortsman2022robust,choshen2022fusing,don2022cold}.
+These works have shown that averaging the parameters of models that share a common architecture can often produce an aggregate model that shares the capabilities of the individual models.
+For example, \citet{wortsman2022model} found that averaging the weights of multiple fine-tuned models produced a single model that performs comparably to an ensemble of the models.
+Motivated by these findings, we propose \textbf{S}oft \textbf{M}erging of \textbf{E}xperts with \textbf{A}daptive \textbf{R}outing (SMEAR), which constructs a single merged expert whose parameters are computed as the weighted average of the experts within a routing block.
+Each expert's weight is set according to the corresponding routing probability generated by the router.
+In SMEAR, the input to the routing block is fed into the merged expert, whose output is used as the output of the block.
+SMEAR implicitly assumes that all experts in the routing block share an identical architecture (thereby inducing a natural one-to-one mapping between parameters in each expert).
+To the best of our knowledge, all past works focused on routing among experts use experts with identical architecture.
+
+More explicitly, we define SMEAR as computing the output of an expert routing block using a merged expert computed as $\bar{f}(u, \sum_i P(v)_i \theta_i)$.
+The merged expert shares the same architecture with the individual experts $f_i$.
+Notably, the input of the routing block is only ever processed by $\bar{f}$; activations are never fed to any of the individual experts.
+To break symmetry, all experts are randomly initialized with different parameter values.
+Importantly, all operations in SMEAR are fully differentiable, SMEAR enables standard gradient-based end-to-end learning.
+In addition, SMEAR retains the ability to learn an adaptive routing strategy that can intelligently route different examples to different experts.
+We will later show qualitatively that this leads to meaningful specialization of different experts in real-world experiments (\cref{sec:qualitative}).
+
+\paragraph{Computational Costs}
+
+Importantly, SMEAR only ever computes the output of a single expert.
+This suggests that the computational costs of SMEAR could be comparable to using discrete routing and significantly lower than ensemble routing.
+However, we note that the averaging operation itself incurs a nontrivial computational cost.
+To quantify this cost, we focus on the common expert architecture comprising a dense layer that projects from $d$-dimensional activations to a $m$ dimensional vector followed by a nonlinearity and finally an additional dense layer projecting from $m$ dimensions back to $d$.
+For simplicity, we ignore the cost of the nonlinearity since it introduces a relatively small computational cost.
+We focus on the setting where the input is a sequence of length $L$ so that the input to an expert routing block is a sequence of activations of size $L \times d$.
+In this case, computing the output of a single expert incurs a computational cost of approximately $L \times 4 \times d \times m$ FLOPs and ensemble routing with $N$ experts would require $N \times L \times 4 \times d \times m$ FLOPs.
+SMEAR also requires only $L \times 4 \times d \times m$ to compute the output of the merged expert, but must average together the parameters of $N$ experts.
+Computing this average once incurs an additional cost of approximately $N \times 2 \times d \times m$.
+Some past work on models with discrete routing has the router choose a different expert for each entry in the input sequence of activations (e.g. \citealp{fedus2021switch,lewis2021base,roller2021hash}).
+This would require computing the expert average $L$ times, which would make the cost of SMEAR similar to that of ensemble routing.
+We therefore focus on settings where models make a \textit{single} routing choice for an entire input example (e.g.\ \citealp{shazeer2017outrageously,gururangan2021demix,kudugunta2021beyond,ye2022eliciting}).
+This results in a total cost of approximately $(L \times 4 + N \times 2) \times d \times m$ for SMEAR.
+Consequently, as long as $L \times 4 \gg N \times 2$, SMEAR and discrete routing have roughly the same computational costs.
+Furthermore, we would expect SMEAR to be approximately $\frac{N \times L}{N + L}$ times cheaper than ensemble routing.
+More concretely, we find in \cref{sec:speed} that the wall-clock time required to process an example with SMEAR in real-world experiments is roughly the same as using discrete routing and significant faster than ensemble routing. 
+
+\section{Experiments}
+\label{sec:setup}
+In order to thoroughly evaluate the effectiveness of SMEAR in addressing the limitations of models that learn discrete routing through gradient estimation, we perform experiments in two real-world settings that differ in model architecture and modality.
+We are particularly interested in whether a given approach for learning routing outperforms the heuristic routing strategies describe in \cref{sec:heuristic}.
+As such, we focus on experimental settings where a performant ``tag routing'' baseline can be designed, i.e.\ where we have metadata that can be used to appropriate route examples.
+Specifically, we experiment with fine-tuning T5 1.1 Base \citep{raffel2020exploring} on datasets from GLUE \citep{wang2018glue} (referred to as T5-GLUE) and fine-tuning a ResNet18 \citep{he2016deep} on DomainNet \citep{peng2019moment} (ResNet-DomainNet).
+In these settings, we add experts to an existing pre-trained backbone in the same way that Adapters are used for parameter-efficient fine-tuning \cite{houlsby2019parameter}.
+
+\paragraph{T5-GLUE}
+
+In this scenario, we focus on training a T5 model \citep{raffel2020exploring} on the GLUE meta-benchmark \citep{wang2018glue} for natural language understanding. 
+GLUE consists of nine datasets ranging across sentimental analysis (SST-2 \citep{socher2013recursive}), acceptability judgement (CoLA \citep{warstadt2019neural}), natural language inference (MNLI \citep{williams2017broad}, RTE \citep{bentivogli2009fifth}), semantic similarity (QQP\footnote{\url{https://quoradata.quora.com/First-Quora-Dataset-Release-Question-Pairs} \label{qqp-source}}, MRPC \citep{dolan2005automatically}, STS-B \citep{cer2017semeval}), question answering (QNLI \citep{rajpurkar2016squad}), and commonsense reasoning (WNLI \citep{levesque2012winograd}).
+Following convention, we exclude WNLI and use the remaining 8 datasets. 
+We use the prompted form of these datasets available in PromptSource \citep{bach2022promptsource}, maps each example into a natural language request-and-response form.
+During training, we randomly select a prompt template for each example from the PromptSource templates for the example's dataset and we evaluate each example using all of the datatset's templates.
+We base our implementation on \citet{mahabadi2021parameter} for splitting train, eval, and test sets of GLUE datasets.
+When using tag routing, we consider the dataset of each example as the tag.
+We use the pretrained T5 1.1 Base model as the backbone and adapt the model in a way similar to adding adapters \citep{houlsby2019parameter} for a single task, i.e.\ we keep all pretrained parameters frozen except for layer normalization parameters and insert expert routing blocks after self-attention, feed-forward and cross-attention modules.
+The T5 1.1 Base model has 12 Transformer layers in both the encoder and decoder, resulting in a total of $12\times2 = 24$ blocks in the encoder and $12 \times 3 = 36$ blocks in the decoder, totally 60 expert routing blocks.
+In each block, we introduce eight experts (one for each dataset in GLUE).
+The router architecture comprises a layer normalization layer, a linear layer, and a softmax nonlinearity to generate the routing probability distribution.
+During the forward pass, each vector in the linear layer is rescaled using a separate layernorm to avoid unbounded growth which would result in the router consistently outputting a one-hot distribution.
+% We found that layer normalization effectively mitigates this issue and thus, it was included as a component of the router.
+In the encoder, the router takes as input the preceding hidden states, which are averaged across the sequence and fed into the router. 
+In the decoder, the routers receive the average of the encoder's final hidden states instead of the decoder hidden states to prevent information leakage from later target tokens to earlier target tokens. 
+We also experimented with expert dropout of 0.1, following \citet{komatsuzaki2022sparse} where each expert is dropped with a probability of 0.1.
+Our results indicate that expert dropout is beneficial for SMEAR and Top-$K$ methods, but not for other methods. 
+This aligns with our observation that these two methods have less exploration than REINFORCE and ST-Gumbel, as the latter methods do sampling for exploration.
+Therefore, the results presented in \cref{tab:main} include expert dropout for SMEAR and the Top-$K$ method. 
+A detailed ablation of expert dropout can be found in \cref{tab:dropout_ablation}.
+
+\begin{table}[t]
+\centering
+\begin{tabular}{l c c c}
+  \toprule
+  Routing & T5-GLUE & ResNet-DomainNet\\
+  \midrule
+  Tag & 78.5 & 61.5 \\
+  Hash & 67.4 & 52.5 \\
+  Monolithic & 77.5 & 59.0 \\
+  \midrule
+  Top-$k$ & 77.9 & 60.0 \\
+  ST-Gumbel & 76.1 & 58.3 \\
+  REINFORCE & 78.4 & 59.8 \\  
+  \midrule
+  SMEAR & \textbf{82.5} & \textbf{62.0} \\
+  \color{lightgray} Expert ensemble & \color{lightgray}82.8 & \color{lightgray}62.5 \\ 
+  \bottomrule
+\end{tabular}
+\captionof{table}{Average performance of models trained using different routing strategies. Discrete routing strategies learned through gradient estimators (Top-$k$, ST-Gumbel, REINFORCE) tend to underperform tag-based heuristic routing but outperform degenerate strategies (Hash, Monolithic). SMEAR outperforms all other routing strategies with comparable computational cost -- an expert ensemble routing strategy (greyed out) is significantly more expensive (cf.\ \cref{fig:speeds}).}
+\label{tab:main}
+\end{table}
+
+\begin{figure*}[htp]
+\centering
+\subfigure[]{
+    \includegraphics[width=0.48\textwidth]{figures/GLUE_speed.pdf}
+    \label{fig:glue_speed}
+    }
+\subfigure[]{
+\includegraphics[width=0.48\textwidth]{figures/DomainNet_speed.pdf}
+  \label{fig:domainnet_speed}
+} 
+\caption{Comparison of inference speed for various routing strategies in T5-GLUE \subref{fig:glue_speed} and ResNet-DomainNet \subref{fig:domainnet_speed}. SMEAR has comparable speed with that of discrete routing with estimators, whereas computing an ensemble of experts (``Ensemble'') is the slowest.}
+\label{fig:speeds}
+\end{figure*}
+
+\paragraph{ResNet-DomainNet}
+
+In this scenario, we focus on adapting an ImageNet pre-trained ResNet18 \citep{he2016deep} to datasets within DomainNet \citep{peng2019moment}.
+DomainNet is a collection of object recognition datasets that cover six distinct domains that all share the same label space corresponding to 345 object categories.
+We treat the domain of each example as its tag.
+As in the T5-GLUE scenario, we freeze the pretrained model, and insert eight expert routing blocks after each of the eight residual layer groups in the model.
+Each block includes six experts corresponding to the number of domains.
+We use the same layer norm/linear layer/softmax architecture for routers as in T5-GLUE and feed average-pooled hidden states into the router to compute the routing probability.
+Experts in this setting use batchnorm on their input instead of layer norm in the output, following \citep{rebuffi2017learning}. 
+
+In each scenario, we compare SMEAR to learned routing using the gradient estimators from \cref{sec:estimators} and heuristic routing strategies from \cref{sec:heuristic}.
+Full details of hyperparameters and training timings for each scenario are presented in \cref{sec:experiment_details}.
+For scenarios with multiple datasets, we only provide the average performance across datasets in the main paper due to space limitations.
+Full results are provided in \cref{sec:full_results}.
+
+\begin{figure*}[htp]
+\centering
+\subfigure[]{
+    \includegraphics[width=0.48\textwidth]{figures/GLUE_sample_routing.pdf}
+    \label{fig:glue_sample_routing}
+    }
+\subfigure[]{
+\includegraphics[width=0.48\textwidth]{figures/DomainNet_sample_routing.pdf}
+  \label{fig:domainnet_sample_routing}
+} 
+\caption{Average routing distributions produced by SMEAR for two routers from the T5-GLUE model \subref{fig:glue_sample_routing} and two from the ResNet-DomainNet model \subref{fig:domainnet_sample_routing}. For a given router, we average all routing distributions across all examples from a given dataset.}
+\label{fig:sample_routing_distributions}
+\end{figure*}
+
+\subsection{Results}
+
+To assess the overall effectiveness of routing strategies learned with SMEAR, we compare to the performance attained by sparsely-activated models trained with the gradient estimators described in \cref{sec:estimators} and models with different heuristic routing strategies described in \cref{sec:heuristic}.
+A summary of our results is shown in \cref{tab:main}.
+First, we find that models using routing strategies learned through gradient estimators do not outperform tag routing in either settings. 
+Specifically, the best-performing estimator (REINFORCE) in T5-GLUE slightly underperforms tag routing and the best performing estimator (Top-$k$) in ResNet-DomainNet underperforms tag routing by 1.5\%.
+Learned routing with estimators except ST-Gumbel do better than hash and monolithic routing in both settings, which suggests that estimators are learning nontrivial routing strategies that are nevertheless less effective than tag routing. 
+% We also observe that learning a meaningful routing is beneficial since hash routing underperforms all routing strategies in both T5-GLUE and ResNet-DomainNet.
+Pertinently, in all experimental settings, SMEAR outperforms every other routing strategy, including both routing learned by gradient estimators and all heuristic routing strategies.
+In particular, SMEAR achieves 4\% improvement over tag routing in T5-GLUE and 0.5\% improvement over tag routing in ResNet-DomainNet.
+As an upper bound on performance, we also compare SMEAR to expert ensembling (``Ensemble'') which averages the outputs of all experts and incurs significantly higher computational cost. 
+SMEAR underforms expert ensemble by 0.3\% in T5-GLUE and 0.5\% in ResNet-DomainNet.
+Whether expert ensembling corresponds to an attainable upper bound for other learned routing methods is unclear since it makes use of more computation.
+
+To get a better sense of the ways that learned routing can outperform tag routing, we sought to design an improved tag routing strategy.
+Based on prior results in transfer learning on GLUE that show that intermediate- or multi-task training on MNLI and RTE can improve performance on RTE \citep{phang2018sentence, devlin2018bert, pruksachatkun2020intermediate, vu2020exploring}, we designed an additional tag-based routing scheme (called ``Tag+'' in \cref{sec:full_results}) for GLUE where examples from RTE and MNLI are routed to the same expert.
+% The Tag+ strategy attained an average performance of 79.8, which is comparable to SMEAR's performance.
+We find that SMEAR outperforms the Tag+ strategy by 2.9\%. 
+This suggests that SMEAR may be able to uncover and exploit the beneficial commonality between the tasks for different examples without any supervision or metadata.
+We further explore the routing decisions and expert specialization in \cref{sec:qualitative} and find evidence of emergent task-relevant structure in routing decisions.
+
+\subsection{Inference speed}
+\label{sec:speed}
+
+To compare the inference speed of the various methods, we measure the number of examples processed per second during inference in both experimental settings as shown in \cref{fig:speeds}.
+Monolithic routing has the fastest inference speed as all examples utilize only one expert. 
+Tag routing is slower than Monolithic routing as the examples in a batch must be routed to the corresponding experts based on tags. 
+Learned routing with gradient estimators operate similarly during inference, selecting the expert with the highest probability. 
+For the sake of comparison, we compute using only one estimator and refer to it as the Estimator method. 
+The Estimator method has a slightly slower speed than tag routing due to the additional computation required in the router.
+Despite the slight overhead of averaging the weights in SMEAR, we observe that its inference speed is almost identical to that of routing with estimators.
+The Ensemble method performs poorly in terms of speed, with a 1.2x slowdown in T5-GLUE and 1.4x slowdown in ResNet-DomainNet compared to SMEAR. 
+In summary, the SMEAR method outperforms heuristic routing and learned routing with estimators with almost no significant change in inference speed. 
+While the Ensemble method has high performance, its high inference cost makes it impractical for larger models.
+
+\subsection{Qualitative Analysis}
+\label{sec:qualitative}
+
+In this section, we provide qualitative analysis of the routing learned by SMEAR by visualizing the average router distribution across all examples in a given dataset for every router in each model.
+\cref{fig:sample_routing_distributions} illustrates the routing distributions for two routers from the model trained in T5-GLUE and two from ResNet-DomainNet. 
+% For the visualized T5-GLUE routers, we observe significantly different behavior -- one mainly follows a tag routing-style strategy whereas the other routes most datasets to the same expert.
+% However, we note that the tag-style router devotes a single expert to RTE, MRPC, QQP, and QNLI; notably, these tasks are somewhat similar in that they all involve determining similarity among pairs of sentences.
+% In the monolitic-style router, STS-B (the only regression task) and SST-2 (with different output vocabulary) are given a dedicated expert, and MNLI (a large and relatively challenging dataset) is routed through many different experts.
+For the T5-GLUE routers, we observe significantly different behavior. One mainly follows a tag routing-style strategy with shared experts for RTE, MRPC, and MNLI, which are tasks that involve determining similarity among pairs of sentences. 
+The other router routes most datasets to the same expert with STS-B (the only regression task) and SST-2 (with different output vocabulary) given a dedicated expert and MNLI (a large and relatively challenging dataset) is routed through many different experts.
+More broadly, we highlight that there is generally a great deal of sparsity in the learned routing distributions, suggesting a significant amount of expert specialization.
+In ResNet-DomainNet, we can see that examples from the Quickdraw domain are routed to two specific experts in both cases.
+Additionally, we observe that the router distribution of the Painting and Real domains are highly correlated. 
+Other domains such as Clipart, Sketch seem to evenly use experts.
+Interestingly, there is less expert specialization in the ResNet-DomainNet model, suggesting that there may be more similarities between the individual domains in DomainNet compared to the tasks in GLUE.
+Routing distributions for all routers in all layers can be found in \cref{sec:router_dist_all_layers}.
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Models with Conditional Computation}
+
+Various works have investigated ways to circumvent the difficulties in routing in multi-task learning settings.
+For example, \citet{deecke2020latent,hazimeh2021dselect,dua2021tricks} start training with most of the experts activated and gradually introduce sparsity. \citet{kudugunta2021beyond, ponti2022combining, ma2019snr, Gupta2022SparselyAM} group examples from the same task together and introduce task-specific parameters in the router.
+Some works avoid learned routing by hand-crafting heuristic routing strategies.
+\citet{gururangan2021demix} built sparsely-activated language models where different domains use separate experts. On an unknown domain, the model assesses the experts' fitness to combine the experts.
+\citet{Tang2022OneMM, Pfeiffer2022LiftingTC, Pfeiffer2020MADXAA} specify assign experts based on task-related human knowledge.
+\citet{li2022sparse} demonstrate that models structured as sparse mixture-of-experts generalize effectively to novel domains, as compared to other domain generalization algorithms in vision transformers. 
+% Interestingly, \citet{zuo2021taming, wang2022adamix} explore random routing with consistency regularization as a form of model ensembling. 
+Our focus on settings where performant routing schemes can be hand-designed takes inspiration from this line of work.
+
+Because sparsely activated models disentangle computation and parameter count, significant effort has gone into leveraging conditional computation to create massive pre-trained models with a feasible computation cost \citep{fedus2022review, shazeer2017outrageously, fedus2021switch,du2022glam,zoph2022designing,yu2022efficient}.
+Many works explore different routing methods in this setting, with a major focus on balancing the load across experts \citep{lewis2021base, zhou2022mixture, kool2021unbiased, roller2021hash}.
+Another line of work aims to introduce ways to convert trained dense models into similar-sized sparse models with a lower computational footprint \citep{lee2022sparse, zhang2022moefication, komatsuzaki2022sparse}.
+We are interested in scaling up models using SMEAR in future work, but we currently lack the computational resources to do so.
+% More generally, there are other forms of conditional computation beyond the formulation we describe in this work \citep{han2021dynamic}.
+% Modular networks \citep{kirsch2018modular, jiang2019self, hu2017learning} use a router to assemble heterogeneous subnetworks into a network layout specific to a given input example.
+% Early exiting \citep{graves2016adaptive, xin2020deebert, liu2020fastbert, bengio2015conditional} saves computation by terminating inference in earlier layers or recurrent steps.
+
+\paragraph{Gradient Estimation Techniques}
+
+Many gradient estimators have been proposed to produce approximate gradients for learning discrete representations that involve sampling. 
+Our work uses a learned baseline from \citet{clark2022unified} to reduce the variance of the REINFORCE estimator. 
+The REBAR estimator \citep{tucker2017rebar} adds a reparameterizable term to REINFORCE as a baseline that results in a more effective unbiased estimator. 
+This additional term uses a relaxed sample similar to Gumbel-Softmax \citep{jang2016categorical}. 
+RELAX \citep{grathwohl2017backpropagation} is similar to REBAR but uses a learnable neural network for the reparameterizable term. 
+\citet{kool2019buy} uses additional samples from the policy as a built-in baseline for REINFORCE. 
+\citet{yin2018arm} and \citet{dong2020disarm} use the idea of coupling between multiple samples to reduce the variance of the gradient estimator and are designed for binary latent variables.
+\citet{dong2021coupled} improve upon \citet{yin2018arm} and \citet{dong2020disarm} by extending the estimator to categorical variables.
+In preliminary experiments, we did not find any major gains from using more sophisticated gradient estimation techniques, but designing gradient estimators with discrete routing in mind could yield more performant routing strategies.
+
+\paragraph{Issues with Conditional Computation}
+
+\citet{clark2022unified} study the scaling laws of sparse language models and discovered a computational cutoff above which no additional benefits are observed.
+Relatedly, \citet{du2022glam} observe worse results when further scaling up the number of experts.
+\citet{chi2022representation} and \citet{dai2022stablemoe} discover the representation collapse and routing fluctuation issue, respectively.
+\citet{mittal2022modular} create a set of simple and modular data distributions, and show that systems with modular architecture can not find the most beneficial solution when trained end-to-end.
+\citet{ye2022eliciting} experiment with various designs for multi-task learning with task-level routing and find that the performance still cannot surpass simple multi-task baselines.
+Our work demonstrates a possible way to avoid many of these issues by using a fully differentiable routing strategy that does not increase computational costs.
+
+\paragraph{Weight Averaging Methods}
+Our work takes inspiration from prior work that utilizes parameter averaging as an alternative to ensembling.
+For example, \citet{wortsman2022robust,ilharco2022patching} average the weights of a pre-trained and a fine-tuned model to improve performance on target tasks as well as robustness to distribution shift.
+\citet{choshen2022fusing} similarly show that merging multiple models fine-tuned on different datasets can provide a better initialization than using the original pre-trained model for further fine-tuning on new unseen datasets.
+
+% \citet{wortsman2022model} average multiple models fine-tuned from large pre-trained models with different hyperparameters, using techniques such as uniform averaging and greedy averaging by picking those models that increase the average performance using a validation set.
+% \citet{gururangan2021demix, Li2022BranchTrainMergeEP} use data in novel domains to estimate weights to average each of their domain-specific subnetworks.
+% Our work instead learns a router that implements an adaptive routing strategy over the course of the training process.
+Model averaging is also a common step in distributed optimization, where it is widely used in federated learning \citet{mcmahan2017communication} and has recently been used for distributed fine-tuning \citep{wortsman2022fi}, multi-domain training \citep{Li2022BranchTrainMergeEP}, and multitask training \citep{don2022cold}.
+There are also works that utilize different styles of merging instead of weight averaging of parameters, such as reweighting parameters in accordance with their approximate Fisher information \citep{matena2021merging}, aligning features by fitting a linear projection \citep{jin2022dataless}, and permuting columns to account for permutation symmetries \citep{ainsworth2022git}.
+We are interested in applying these more sophisticated merging methods to SMEAR in future work.
+
+% The phenomenon of linear mode connectivity, as observed by \citet{frankle2020linear}, \citet{qin2022exploring} and \citet{entezari2021role}, refers to the tendency of models to converge to a single low-loss basin, which makes it possible to average the weights of models without increasing loss.
+% \citet{juneja2022linear} found that tasks with different generalization strategies have high barriers when linearly interpolated, whereas tasks with similar generalization are linearly mode connected and can be averaged.
+% They defined several generalization strategies and found that sets of tasks form clusters with those strategies.
+% In our case, the router plays the role of identifying experts with similar generalization properties when conditioned on the input and performs the averaging.
+% Methods that can aid the router in finding similar generalizing experts could potentially improve learning in models with conditional computation.
+
+% \section{Conclusion}
+% \label{sec:conclusion}
+
+% In this work, we investigated why conditional computation models with learned routing produce suboptimal routing strategies.
+% Specifically, we designed three experimental settings where a performant heuristic routing strategy could be hand-designed and thoroughly analyzed the performance and behavior of learned routing schemes produced by different gradient estimation techniques.
+% We found that, while subnetworks do specialize when routing is learned, they specialize in a suboptimal manner.
+% As a small step towards a remedy, we experimented with using tag annotations to supervise learned routing, finding that this improved learned routing performance in all cases.
+% Furthermore, we found one setting where learned routing could outperform tag routing when only 1\% of examples were given tag annotations.
+% Our results shed light on shortcomings of models with conditional computation and the gradient estimation techniques used to train them and provide a testbed for future work in the area.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+In this work, we sought to address shortcomings of models with discrete routing among experts that lead them to produce worse performance than heuristic non-learned routing.
+We hypothesized that these issues stem from the gradient estimation techniques required to propagate gradients through discrete routing decisions, and therefore focused on designing an expert routing architecture that faciliated exact gradients to be calculated.
+Our approach, called SMEAR, works by computing a weighted average of expert parameters where the weighting is set according to the output of a learned router.
+We compared the performance of models using SMEAR to models that were trained via various gradient estimation techniques to perform discrete routing.
+In experimental settings covering different modalities and model architectures, we found that SMEAR outperformed all models with discrete routing as well as performant heursitic routing strategies.
+Notably, this performance boost comes with no increase in computational costs.
+Through qualitative analysis, we further confirmed that the experts learned in a model using SMEAR specialize to different types of inputs while the router learns a nontrivial strategy that exploits commonalities across different examples.
+In future work, we are interested in exploring different expert architectures \citep{liu2022few,hu2021lora} and improved merging methods \citep{matena2021merging,ainsworth2022git,jin2022dataless}.
+Given the poor scaling properties of models with discrete routing \citep{clark2022unified}, we would also be excited to try out SMEAR in the same large-scale settings where discrete routing has been used \citep{fedus2021switch,zoph2022designing,du2022glam}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \section*{Accessibility}
+% Authors are kindly asked to make their submissions as accessible as possible for everyone including people with disabilities and sensory or neurological differences.
+% Tips of how to achieve this and what to pay attention to will be provided on the conference website \url{http://icml.cc/}.
+
+% \section*{Software and Data}
+
+% If a paper is accepted, we strongly encourage the publication of software and data with the
+% camera-ready version of the paper whenever appropriate. This can be
+% done by including a URL in the camera-ready copy. However, \textbf{do not}
+% include URLs that reveal your institution or identity in your
+% submission for review. Instead, provide an anonymous URL or upload
+% the material as ``Supplementary Material'' into the CMT reviewing
+% system. Note that reviewers are not required to look at this material
+% when writing their review.
+
+% Acknowledgements should only appear in the accepted version.
+% \section*{Acknowledgements}
+
+% \textbf{Do not} include acknowledgements in the initial version of
+% the paper submitted for blind review.
+
+% If a paper is accepted, the final camera-ready version can (and
+% probably should) include acknowledgements. In this case, please
+% place such acknowledgements in an unnumbered section at the
+% end of the paper. Typically, this will include thanks to reviewers
+% who gave useful comments, to colleagues who contributed to the ideas,
+% and to funding agencies and corporate sponsors that provided financial
+% support.
+
+\bibliography{icml2023}
+\bibliographystyle{icml2023}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+\section{Appendix.}
+\section{Compute resources used}
+\label{sec:compute_resources}
+We provide details on the compute resources used in our experiments. All models were trained using a combination of either 48GB A6000s or 24GB A5000s. 
+The training time for each T5-GLUE experiment was approximately 72 hours with Ensemble method taking 125 hours, while each ResNet-DomainNet experiment required approximately 11 hours of training.  
+
+\section{Experiment Details}
+\label{sec:experiment_details}
+We provide details on the experimental setup and hyperparameter choices for the T5-GLUE and ResNet-DomainNet experiments described in the main text. 
+\subsection{T5-GLUE}
+\label{sec:t5_glue_hyps}
+In the T5-GLUE experiments, all T5 models were trained for $400k$ steps using a learning rate of $3e^{-4}$, with $2k$ warmup steps, and batch size of $128$. The AdamW optimizer was used with its default settings. 
+We ran ST-Gumbel estimator with a $\tau$ value of $10$ and an anneal rate of $1e^{-6}$.
+For the REINFORCE estimator in Equation \ref{eq:reinforce_estimator_eq}, we used the same values as in \citep{clark2022unified}, $\alpha$ = $1e^{-2}$, $\beta$ = $5e^{-4}$, and $\gamma$ = $1e^{-2}$.
+The adapters here use $swish$ non-linearity in between. 
+
+\subsection{ResNet-DomainNet}
+\label{sec:res_domainnet_hyps}
+In the ResNet-DomainNet experiments, all ResNet models were trained for $100k$ steps with batch size of $128$ and a learning rate of $1e^{-3}$, with no warm up, using Adam optimizer.
+We used $\tau$ value of $10$ and anneal rate of $1e^{-4}$ for the ST-Gumbel estimator.
+The values of $\alpha$, $\beta$, and $\gamma$ for the REINFORCE estimators in Equation \ref{eq:reinforce_estimator_eq} are same as in T5-GLUE experiments.
+The adapters also used $swish$ non-linearity in between. 
+
+\section{Expert dropout}
+\label{sec:expert_dropout}
+\cref{tab:dropout_ablation} illustrates the impact of expert dropout on different learned routing methods. 
+It is evident that SMEAR benefits from an improvement of 3.8\% on T5-GLUE, and Top-$K$ benefits from an improvement of 0.3\% and 0.2\% on T5-GLUE and ResNet-DomainNet respectively. 
+Expert dropout is included for these two methods when discussed in the main text.
+However, expert dropout negatively impacts the performance of ST-Gumbel and REINFORCE methods and thus, it is excluded for these two methods in the main text.
+
+\begin{tabular}{l c c c}
+  \toprule
+  Routing & T5-GLUE & ResNet-DomainNet\\
+  \midrule
+  Top-$k$ & 77.6 & 59.8 \\
+  \; w/ Expert dropout 0.1 & 77.9 (+0.3) & 60.0 (+0.2)\\
+  ST-Gumbel & 76.1 & 58.3 \\
+  \; w/ Expert dropout 0.1 & 75.5 (-0.6)& 57.9 (-0.4)\\
+  REINFORCE & 78.4 & 59.8 \\  
+  \; w/ Expert dropout 0.1 & 77.2 (-1.2)& 59.8 (+0.0)\\
+  SMEAR & 78.7 & 62.0 \\
+  \; w/ Expert dropout 0.1 & 82.5 (+3.8)& 62.0 (+0.0)\\
+  \bottomrule
+\end{tabular}
+\captionof{table}{Performance comparision of different learned routing strategies w and w/o dropout. The results indicate that SMEAR and Top-$k$ method benefit from the expert dropout, while ST-Gumbel and REINFORCE are negatively affected.}
+\label{tab:dropout_ablation}
+
+\section{Full results on T5-GLUE and ResNet-DomainNet}
+\label{sec:full_results}
+We show the full results of T5-GLUE in \cref{tab:glue_results} and ResNet-DomainNet in \cref{tab:domainnet_results}.
+\begin{table}
+    \centering
+\begin{adjustbox}{angle=90}
+    \begin{tabular}{l c c c c c c c c c c c c}
+      \toprule
+      Routing & RTE  & SST-2 & MRPC  & MRPC  & STS-B  & STS-B  & QQP  & QQP  & MNLI  & QNLI  & CoLA & Average \\
+       & acc & acc & f1 & acc & pearson &  spearman & f1 & acc & acc & acc & mcc & \\
+      \midrule
+      Tag & 52.9 & 92.1 & 88.1 & 82.8 & 84.1 & 83.9 & 86.1 & 89.6 & 84.9 & 89.3 & 29.9 & 78.5 \\
+      Tag+ & 69.0 & 92.0 & 87.6 & 82.1 & 83.3 & 83.1 & 86.7 & 89.8 & 84.8 & 88.4 & 30.9 & 79.8 \\
+      Hash & 57.0 & 87.3 & 77.3 & 69.0 & 67.8 & 67.2 & 77.0 & 83.4 & 73.6 & 80.3 & 1.4 & 67.4 \\
+      Monolithic & 59.4 & 91.6 & 90.0 & 85.7 & 86.6 & 87.0 & 85.4 & 88.9 & 84.2 & 89.7 & 3.9 & 77.5 \\
+      Top-$k$ & 64.6 & 92.4 & 87.2 & 81.5 & 89.1 & 88.9 & 85.1 & 88.8 & 84.0 & 89.1 & 6.3 & 77.9 \\
+      ST-Gumbel & 63.2 & 92.3 & 85.2 & 79.3 & 87.0 & 86.6 & 84.7 & 88.4 & 83.7 & 88.4 & -1.8 & 76.1 \\
+      REINFORCE & 63.2 & 92.8 & 88.0 & 83.0 & 88.2 & 88.1 & 86.0 & 89.3 & 85.1 & 90.2 & 9.0 & 78.4 \\
+      SMEAR & 68.1 & 91.0 & 92.9 & 90.1 & 89.6 & 89.4 & 86.1 & 89.6 & 85.7 & 91.0 & 34.4 & 82.5 \\ 
+      Ensemble & 73.0 & 92.4 & 91.1 & 87.7 & 86.6 & 85.9 & 87.0 & 90.1 & 85.3 & 90.4 & 40.8 & 82.8 \\
+      \bottomrule
+    \end{tabular}
+\end{adjustbox}
+    \caption{Full T5-GLUE results.}
+    \label{tab:glue_results}
+\end{table}
+
+
+\begin{table}
+    \centering
+\begin{adjustbox}{angle=90}
+\begin{tabular}{l c c c c c c c}
+  \toprule
+  Routing & Clipart & Infograph & Painting & Quickdraw & Real & Sketch & Average \\
+  \midrule
+  Tag & 63.3 & 30.7 & 58.2 & 61.8 & 74.2 & 54.8 & 61.5 \\
+  Hash & 53.5 & 23.2 & 50.3 & 48.5 & 68.6 & 46.1 & 52.5 \\
+  Monolithic & 60.6 & 28.0 & 54.7 & 58.9 & 72.2 & 52.5 & 59.0 \\
+  Top-$k$ & 61.9 & 29.4 & 55.3 & 60.1 & 73.2 & 53.4 & 60.0 \\
+  ST-Gumbel & 59.8 & 27.2 & 54.6 & 57.7 & 72.0 & 51.9 & 58.3 \\
+  REINFORCE & 61.2 & 28.7 & 55.6 & 60.0 & 72.8 & 53.9 & 59.8\\
+  SMEAR & 64.2 & 31.5 & 57.7 & 62.4 & 74.3 & 56.0 & 62.0 \\
+  Ensemble & 65.0 & 31.3 & 58.3 & 63.2 & 74.3 & 57.0 & 62.5 \\
+  \bottomrule
+\end{tabular}
+\end{adjustbox}
+    \caption{Full ResNet-DomainNet results.}
+    \label{tab:domainnet_results}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Routing distribution of all layers}
+\label{sec:router_dist_all_layers}
+Here we put the routing distribution of all layers in both T5-GLUE and ResNet-DomainNet learnt by SMEAR in \cref{fig:glue_routing_layer0to23}, \cref{fig:glue_routing_layer24to48}, \cref{fig:glue_routing_layer48to60} and \cref{fig:domainnet_routing}. 
+
+\begin{figure*}[htp]
+ 
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/GLUE_routing_layer0-24.pdf}
+    \caption{Routing distribution learnt by SMEAR in encoder routing blocks (0-23) of T5-GLUE}
+    \label{fig:glue_routing_layer0to23}    
+
+\end{figure*}
+
+\begin{figure*}[htp]
+ 
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/GLUE_routing_layer24-48.pdf}
+    \caption{Routing distribution learnt by SMEAR in decoder routing blocks (24-47) of T5-GLUE}
+    \label{fig:glue_routing_layer24to48}    
+
+\end{figure*}
+
+
+\begin{figure*}[]
+ 
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/GLUE_routing_layer48-60.pdf}
+    \caption{Routing distribution learnt by SMEAR in decoder routing blocks (48-59) of T5-GLUE}
+    \label{fig:glue_routing_layer48to60}    
+
+\end{figure*}
+
+\begin{figure*}[]
+ 
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/DomainNet_routing.pdf}
+    \caption{Routing distribution learnt by SMEAR in all layers of ResNet-DomainNet}
+    \label{fig:domainnet_routing}    
+
+\end{figure*}
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.

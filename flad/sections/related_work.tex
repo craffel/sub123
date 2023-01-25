@@ -1,0 +1,85 @@
+\section{Related Work}
+
+
+% Works that combined MAB into supervised learning
+Prior works have utilized MAB as a method of improving supervised learning. For example,~\citet{Pasunuru2020DORBDO} use MAB to optimize multiple rewards for language generation, and~\citet{Guo2018DynamicMM} use it to select auxiliary tasks to improve sentence simplification.
+% Works that combine auxiliary data into training
+Some early works found success when combining auxiliary data into target-aware training such as~\citep{10.1145/1015330.1015436}. \citet{chen2022weighted} perform target-aware training, but assume access to 10,000 target samples (not few-shot) and only utilize 1 auxiliary dataset. Yet other works~\citep{Lin2022UnsupervisedCG,Ivison2022DEFT} incorporate auxiliary data by retrieving samples similar to the target dataset, but assume access to 1,000 unlabeled target examples to create a quality representation for retrieval. More similar to our work are~\citet{Verboven2022, https://doi.org/10.48550/arxiv.1812.02224}, which adaptively weight auxiliary losses based on gradient alignment, but they both evaluate on settings with only 2 auxiliary datasets.
+
+
+
+% (1) Multi-armed bandits uses
+% \citet{graves2017automated} use multi-armed bandits to automate curriculum learning with the \ex{} algorithm. They propose multiple interesting gradient-based reward functions which could be used to replace our similarity reward, but which require additional computation.
+
+% (2) Prior works that consider training with auxiliary data
+
+% \citep{Verboven2022} - adaptively weight loss functions from auxiliary tasks based on mini-batch similarities similar to our work. Only evaluated in toy settings on synthetic data and using a single auxiliary task at a time.
+
+% \citep{https://doi.org/10.48550/arxiv.1812.02224} - Use cosine similarity between multiple objectives to scale the loss function, only 2 tasks
+
+% \citep{NEURIPS2019_0e900ad8} - using auxiliary tasks in an RL setting, they want to find tasks whose gradients point in the same direction as target task
+
+% \citep{deryAANG2022} - Similar to our work. They focus on using unsupervised auxiliary data with many possible self-supervised auxiliary objectives.
+
+% \citep{chen2022weighted} - present the Target-Aware Weighted Training algorithm, tries to learn a representation of the target task. Crucially, they assume access to a large enough quantity of target data ($\sim$10K samples) to allow for such a representation to be learned, and they do not consider settings with more than 1 auxiliary dataset.
+
+% Methods such as ReCross \cite{Lin2022UnsupervisedCG} and DEFT \cite{Ivison2022DEFT} aim to incorporate auxiliary datasets during training for downstream tasks, but also assume access to up to 1000 unlabeled target examples.
+
+% (3) Curriculum Learning
+% \citep{wang2021survey} - a survey of curriculum learning
+
+% (4) Multi-task and meta-learning
+
+% Transfer learning falls under the static distribution dilemma
+% Meta-learning focuses on a general learning algorithm that will work well for any 
+% Multi-task learning gives equal weight to all tasks during MTL training, missing out on taking advantage of end-task specific knowledge
+
+% Recent works on the FLAD problem have utilized methods from transfer learning \citep{vu-etal-2020-exploring, pruksachatkun-etal-2020-intermediate, feta_albalak}(\alon{update FETA with EMNLP proceeding}), meta-learning \citep{10.5555/296635, bansal-etal-2020-self}, and multi-task learning \citep{Wu2020Understanding, aghajanyan-etal-2021-muppet, sanh2022multitask, Verboven2022}.
+% % Transfer Learning
+% Prior works in transfer learning have proposed methods of determining which datasets will provide positive transfer while avoiding negative transfer, but these methods generally focus only on a single source of auxiliary data. Additionally, transfer learning methods assume that the quality of transfer is static and disregard the dynamics of training, reducing computational complexity but leading to suboptimal transfer. 
+% % Meta-Learning and Multi-Task Learning
+% Methods based on meta-learning and multi-task learning lead to models which can be quickly trained on many new tasks by splitting their supervised training into two phases. In the first phase, the target data is given no weight, or equal weight to the auxiliary data, and in the second phase the target data is trained on alone. This first target-agnostic training phase can lead to models which are optimal for generalizing to a large number of new tasks, but suboptimal for training on any specific task.
+
+% \begin{itemize}
+%   \item MTL doesn't consider the target task during MTL, only during fine-tuning
+%   \item In-context learning with massive language models avoid the training data selection problem, but fall into a parallel problem of selecting the in-context examples to use. Additionally, many studies have still found that smaller trained models can largely outperform such generalist models.
+%   \item Works on transfer learning have proposed methods of determining which datasets provide positive transfer while avoiding negative transfer, but such methods do not consider the dynamics of training and generally focus only on single source to single target transfer
+%   \item Data selection and curriculum learning can be very expensive with such large quantities of auxiliary data
+% \end{itemize}
+
+% Few-shot learning is an attractive paradigm for many machine learning practitioners as it can save on cost and time for data collection and annotation. One method of performing few-shot learning is to find existing datasets for the domain, task, and language of interest. Over time, the number of annotated datasets has increased, allowing for practitioners to find more data that fits the target domain and task. Transfer learning is a field that aims to understand which auxiliary tasks/domain/languages can be used to improve model performance on the target task/domain/language, however, transfer learning generally considers the stationary problem of determining transferrability prior to training a new model. This disregards the dynamics of training entirely, leading to suboptimal performance.
+
+% \citep{bach-etal-2022-promptsource} - promptsource
+
+% \citep{supernaturalinstructions} - nat instruct v2
+
+% \citep{aribandi2022ext} - ExT5
+
+% (5) Data selection
+
+% \citep{sorscher2022beyond} Beyond neural scaling laws, A method for dataset pruning for very large datasets
+% They propose a self-supervised data pruning method which groups unlabeled data points by a clustering algorithm and determines self-supervised prototypes
+% Once they have clusters, they determine that “hard” samples are those farthest from the cluster centroid, and easier samples are those which are closer
+
+% Prioritized training on points that are learnable, worth learning, and noy yet learnt
+
+% Numerous recent works on instance selection \cite{Siddiqui2022MetadataAU}, which cover a few situations. Some methods focus on model pre-training \cite{Sorscher2022BeyondNS, Mindermann2021PrioritizedTO} where the idea is to select a subset of data D, where D << All-Data, and D is a better selection of samples which allows for similar or better performance to training on All-Data. When these methods are done online, this can be seen as a form of curriculum learning. If these methods are used offline, they can be very useful for gaining a better understanding of the training data. On the other hand, instance selection can be used in fine-tuning settings. Studies on instance selection during fine-tuning assume large quantities of in-domain target task-specific data. Again, when these methods are used in an online setting, they are a form of curriculum learning. However, in this scenario, when methods are used offline, they can be used to identify possibly mislabeled data, subgroups, instance difficulty, and dataset biases.
+
+% Methods such as multi-task learning and meta-learning focus on a similar problem to our setting, but they generally perform a final fine-tuning on the target task (when data is available) which does not utilize the available auxiliary data. \cite{Dery2021ShouldWB} argue for end-task aware training, as an alternative to pre-training and fine-tuning. However, their methods focus on tasks with large unlabeled domain-specific datasets to benefit the pre-training and do not consider the few-shot setting, which has been shown to benefit from general pre-training.
+
+% Prior works have found success in improving downstream task performance by continued pre-training simultaneous to fine-tuning. (zack lipton's recent work is an example "downstream datasets make surprisingly good pretraining corpora")
+
+% \begin{itemize}
+%     \item \cite{Pasunuru2020DORBDO} use MAB as a method of optimizing multiple rewards for language generation tasks.
+%     \item \cite{Guo2018DynamicMM} use multi-armed bandits based approach for selecting from auxiliary tasks for sentence simplification task.
+%     \item \cite{Sharma2017OnlineML} good example of use of bandits in RL for multi-task learning
+%     \item \cite{lattimore_szepesvári_2020} Big book on bandit algorithms (suggested by Dheeraj)
+%     \item \cite{wei2021non} Very interesting future approach, since similarity distributions are non-stationary and training has stochasticity, this algorithm suggests that multiple training runs can be performed which will lead to better performance and improved worst-case outcomes (suggested by Dheeraj)
+%     \item \cite{simpkins2008optimal} Use in introduction when talking about exploration-exploitation tradeoff. Example of exploration-exploitation in optimal control scenario
+%     \item \cite{shaham2022causes} consider the causes for negative interference between languages in multilingual translation, finding that model size, data size, and proportion of data coming from each language in the mixture. Unsurprisingly, they find that by increasing model size, a multilingual model has less negative interference because it has greater capacity for each language.
+%     \item \cite{pmlr-v24-seldin12a} We take our exp3 algorithm directly from Algorithm 1 in this work. This is a slight variation of the original Exp3 algorithm \cite{auer2002nonstochastic} which varies the the exploration rate over time. Because the exploration rate never drops to 0 and we have relatively short play horizons (<10000 steps), the algorithm will sample ``bad'' actions at a rate of $\epsilon_{t}=\sqrt{\frac{\mathrm{ln}K}{Kt}}$ where $t$ is the current turn. Under a stationary distribution such continued exploration is a negative consequence, but in our scenario we do not have stationarity, therefore we must allow for such a continued exploration.
+%     \item \cite{auer2002finite} introduce the UCB1 algorithm
+%     \item \cite{bubeck2009} discuss the differences in exploration-exploitation strategies under 2 settings: (1) when exploration is only constrained by the number of available rounds (not necessarily known in advance), or (2) when the cumulative regret is considered and when exploitation needs to be performed at the same time.
+%     \item \cite{Katharopoulos2018NotAS} Use a method based on importance sampling (related to UCB1) for solving the sample selection problem on single-task fine-tuning.
+%     \item \cite{10.1145/1015330.1015436} ``This paper explores  an application in which a second, auxiliary, source of data is available drawn from a different distribution. This auxiliary data is more plentiful, but of significantly lower quality, than the training and test data.'' This work is from 2004, uses SVM, and demonstrates that using auxiliary data is not a new idea. Another work more recently, \cite{esfandiarpoor2021} also considers using labeled auxiliary data in the few-shot setting, but in a much more constrained setting where the auxiliary data are new classes
+% \end{itemize}

@@ -1,0 +1,1132 @@
+
+\documentclass[dvipsnames]{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2021} with \usepackage[nohyperref]{icml2021} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2023}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{cleveref}
+
+\usepackage{mymacros}
+\usepackage{proj_macros}
+% \usepackage{setspace}
+
+\usepackage{snli_ex}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{NPEFF: Non-Negative Per-Example Fisher Factorization}
+
+\begin{icmlauthorlist}
+\icmlauthor{Michael Matena}{unc}
+\icmlauthor{Colin Raffel}{unc}
+\end{icmlauthorlist}
+
+\icmlaffiliation{unc}{Department of Computer Science, University of North Carolina at Chapel Hill, Chapel Hill, USA}
+
+\icmlcorrespondingauthor{Michael Matena}{mmatena@cs.unc.edu}
+
+
+\icmlkeywords{Machine Learning, ICML}
+
+\vskip 0.3in
+]
+
+\begin{abstract}
+Interpretation of deep learning models remains a challenge.
+In this paper, we introduce a novel interpretability method called NPEFF that is readily applicable to any model with differentiable parameters.
+Operating on the principle that processing of similar features across different examples involves similar subsets of parameters, NPEFF works by factoring a matrix whose entries roughly correspond to the importance a particular parameter has to the model's predictions on a particular example.
+The sparsity of the matrix makes this operation tractable.
+We demonstrate that components recovered by NPEFF have interpretable tunings through experiments on NLP and vision models.
+Furthermore, we can make use of the information geometric interpretation of the Fisher information matrix to verify that the connections between specific parameters and examples recovered by NPEFF actually reflect the model's processing.
+We perform extensive experiments showing that this is indeed the case for our NLP and vision models.
+\end{abstract}
+
+\section{Introduction}
+
+The ability of machine learning to learn how to solve tasks given a data set has allowed neural networks to achieve state of the art performance on many tasks.
+% In contrast to hand-coded solutions, however, understanding what these these models typically do not provide 
+However, these models do not provide immediate methods to understand what they have learned or how they have solved the task \citep{li2022interpretable}.
+This lack of understanding can hamper progress in developing new machine learning methods and models.
+Furthermore, it acts as a hindrance to the adoption of these models in practice by making it hard to trust that the model's predictions are based on sound principles.
+
+While there are a variety of methods that aim to remedy this lack of interpretability, a common approach produces interpretations based on the salience of input features \citep{smilkov2017smoothgrad, dabkowski2017real, sundararajan2017axiomatic}.
+% These typically produce interpretations 
+However, the low-level nature of input features commonly used (e.g.\ pixels) contrasts with the high-level features relevant to common tasks (e.g.\ object identity) \citep{kim2018interpretability}.
+This can cause difficulties when we want to see what higher level features are used by the model in solving the task.
+To rectify this, some work has explored using intermediate activations of the model in producing interpretations.
+These typically relate some subset of activations to particular concepts.
+
+However, these approaches can be difficult to apply in a model-independent manner.
+The nature of some models, such as the sequence-length dependent dimension of activation space in transformer models, can make the analysis of their activations non-trivial and require additional assumptions.
+Furthermore, it is hard to use activation-space representations to make informed changes to the parameters of a model in a principled way.
+
+In this paper, we propose a method called NPEFF (\textbf{N}on-Negative \textbf{P}er-\textbf{E}xample \textbf{F}isher \textbf{F}actorization) that makes use of parameter-space to produce representations of concepts.
+Our method can be used with any model with differentiable parameters without requiring any customization to particular architectures.
+Unlike many previous methods, our method extracts these concepts unsupervisedly given a set of examples.
+It also provides a theoretically principled way to use these concept representations to directly alter a model's parameters to produce guided changes in the model's behavior.
+
+NPEFF makes use of what we call the per-example Fisher (PEF) to map individual examples to a non-negative vector with the same dimensions as parameter space.
+The PEF is the diagonal approximation to the Fisher information matrix \citep{fisher1922mathematical} of the model's predictions on a particular example.
+It can intuitively be thought of as a salience map over the parameters indicating their importance to the model's predictions on the example \citep{kirkpatrick2017overcoming}.
+The tendency of PEFs to be extremely sparse allows them to be tractable to store and process.
+
+
+% We expect patterns to be present across the PEFs of a given set of examples.
+% If a set of 
+
+% We hypothesize that patterns present in the collection of PEFs of a representative set of examples reflect concepts used by the model in its processing of inputs.
+% For example, s
+
+We hypothesize that a neural network's processing of inputs can be decomposed into a hierarchical set of abstract sub-computations.
+A model contains a fixed set of learned sub-computations, and its processing on any particular example involves a sparse subset of them.
+A sub-computation being used requires an example to contain some abstract concept and have that concept be used by the model to inform its predictions.
+Across examples, we assume that each sub-computation will involve a consistent subset of parameters performing a similar operation.
+
+This assumption allows us to recover the set of possible sub-computations along with the assignment of sub-computations to individual examples given a large enough set of PEFs.
+Namely, we construct a construct a non-negative matrix from the PEFs and factor it as a product of two low-rank, non-negative matrices using non-negative matrix factorization (NMF) \citep{lee1999learning}.
+The rank of this factorization, which is a hyperparameter, is equal to the number of distinct sub-computations to recover.
+% \textbf{[TODO]}
+% Explain how we think they will be present and then NMF.
+
+One of the recovered factors maps assigns a score to each pair of examples and sub-computations reflecting the importance of that sub-computation to the model's processing of the example.
+We can use this to get a qualitative understanding of the concept represented by each sub-computation by looking at the set of examples with the highest coefficients for a particular sub-computation.
+% We find that these groups of examples usually contain
+
+The other recovered factor maps each sub-computation to a non-negative vector that acts as a salience map over the model's parameters.
+Using the information geometric interpretation of the Fisher information matrix \citep{amari2016information}, we show how it can be interpreted as a ``pseudo''-Fisher for the sub-computation.
+We then develop a theoretically-principled means of selectively altering the model's use of a sub-computation based on Fisher-weighted parameter averaging.
+This provides a way to verify that the parameters highlighted by a sub-computation's pseudo-Fisher are indeed selectively important to the model's processing of its associated examples.
+% [Then something like this also provides a way to verify that the parameters highlighted by a concept's pseudo-Fisher are indeed selectively important to the model's processing of examples associated to the concept.]
+
+% \textbf{TODO:} Then I guess finally either summarize our experiments or do a section-by-section summary of the paper that involves a summary of our experiments.
+
+
+
+
+
+
+% \paragraph{asdfasdf}
+
+
+% % The loosely defined notion of interpretability is important because:
+% % Can provide insights into how tasks can be solved (when used in "complicated" situations.
+% % Can better drive research into model design.
+% % Potentially provide new ways to interact/modify with models.
+% % Understand why a model makes certain predictions, to help engender trust blah blah.
+
+% % Existing methods often either produce a proxy model with interpretable parameters or produce interpretations based in input or activation space.
+% % Basically makes it hard to use these interpretations to modify the model.
+% % Also input/activation space can sometimes be difficult to work with such as in cases with varying sequence length.
+% % [Either at end of this or start of next paragraph] Mapping concepts to [structures in] parameter space can get around those issues.
+
+% % The PEF allows us to map an example to a representation based in parameter space.
+% % The tendency of PEFs to be extremely sparse allows them to be tractable to store and process.
+% % 
+
+
+
+% Although deep neural networks have achieved remarkable success in a wide variety of applications, they are often used in a black box capacity where little information is available on how they form their predictions.
+% Model interpretability algorithms aim to remedy this by providing insights into model behavior.
+
+% There are a variety of motivations and existing methods for model interpretability.
+% Significant research has gone into explaining why a model makes its predictions on specific examples to help engender trust in its predictions.
+% Some of this work explores the importance of specific input features to the model's predictions.
+% Other work has explored finding interpretable directions in the latent space of generative models to assist in user-guided generations.
+% \textbf{[TODO: Maybe one more sentence here, to better transition.]}
+
+% In this work, we present a novel interpretability algorithm called NPEFF (\textbf{N}on-Negative \textbf{P}er-\textbf{E}xample \textbf{F}isher \textbf{F}actorization).
+% It unsupervisedly produces a set of parameter-importance maps each tied to specific processing strategies along with assigning combinations of these strategies to the model's predictions on specific examples.
+% This is accomplished by first selecting a set of examples an then computing the diagonal approximation to the Fisher information matrix for each example, which can be thought of as measuring the importance of each parameter to the model's predictions for that example.
+% The inherent sparsity of these per-example Fishers (PEFs) allows them to stored and manipulated in a memory and computationally efficient manner.
+% We then use non-negative matrix factorization (NMF) to factor the matrix formed by these PEFs into the product of two low-rank non-negative matrices.
+% One of these matrices provides the set of parameter-importance maps while the other assigns a combination of these maps to each example.
+% When we look at the examples for which a specific component is most important, we often find commonalities that can be interpreted as relevant to the model's processing of those examples.
+
+% NPEFF is based on the intuition that a model's computation for a given example can be decomposed as a combination of sub-computations.
+% These sub-computations are then shared amongst various subsets of examples depending on their features and the model's processing.
+% We hypothesize that these sub-computations can be tied to structures in parameter space.
+% We chose to use diagonal PEFs for tractability purposes, and this amounts to associating sub-computations with fuzzy subsets of parameters.
+% Each PEF then represents a combination of the sub-computations used in processing an example.
+% We can get an idea of how a model processes a specific example by looking at the set of sub-computations associated to it.
+
+% % \textbf{[TODO: Maybe need to talk about how we ``interpret'' a subcomputation/component.]}
+% % Each sub-computation will depend on specific subsets of parameters
+% % Since a model's processing arises from its parameter values, each sub-computation can then be tied to 
+% % Each sub-computation can then be tied specific subsets of parameters
+
+% % across a data set can be decomposed into a set of combinations for each example of a common set of computations.
+
+
+% % set of combinations of a set of 
+
+% % \textbf{[TODO...]}
+% % Quick summary of NPEFF method.
+% %   - Say make use of the inherent sparsity of Fishers to do this stuff in a memory and computationally efficient manner.
+% % Say that it provides a theoretically justified means of testing the claims of importance of specific parameters to strategies.
+% % 
+
+% Rather than creating far weaker proxy models with interpretable parameters, NPEFF provides a means of directly interpreting the parameters of any differentiable model.
+% This opens up the possibility of using these interpretations to inform user-guided changes of deep models.
+% We show that each component's importance map over parameters can be interpreted as a Fisher, which allows us to use techniques from \textbf{[CITE: model merging]} to alter model parameters.
+% We use this to provide a theoretically justified means of verifying the relationship between parameter importance maps and their associated processing strategies. 
+% % testing the claims of importance of specific parameters to strategies.
+% % \textbf{[TODO...]}
+% % Something like what I have in a comment above, maybe just have that here: "Say that it provides a theoretically justified means of testing the claims of importance of specific parameters to strategies."
+
+% % Maybe summarize the experiments, then done.
+
+% In \textbf{[CREF: sec]}, \textbf{[TODO: Summarize each section]}
+
+
+
+% % Previous model interpretability algorithms 
+
+% % Typically, \emph{interpretability} is defined as anything that makes it easier for a human to understand why a model makes certain predictions.
+% % An important concept in interpretability research is that of \emph{trustworthiness}, i.e.\ that the interpretations actually reflect how the model makes its decisions.
+
+% % We present a novel interpretability algorithm called NPEFF (\textbf{N}on-Negative \textbf{P}er-\textbf{E}xample \textbf{F}isher \textbf{F}actorization).
+% % \textbf{[TODO]}
+% % It is global, parameter-space 
+
+% % parameter-importance maps
+% % 
+
+% % In cases such as models generating images given a latent state, techniques exist that allow the unsupervised discovery of interpretable directions in latent space.
+% % Knowledge of such directions allows for more controllable image generation given the intents of users.
+% % 
+
+% \paragraph{TODO:} \textbf{Maybe try to interpret the model's predictions for specific examples by looking at its top components and their respective tunings.}
+
+% Interpretability comes from the W example groupings, Trustworthiness comes from the H/W-based ablations, along with some theoretical basis.
+
+\section{Methods}
+\subsection{Fisher Information Matrix}
+Consider a classification model $p_\theta(y|\x)$ with fixed parameters $\theta \in \R^m$ that maps inputs $\x\in\mathcal X$ to a softmax distribution over $C$ labels.
+With input distribution $\x \sim p(\x)$, its Fisher information matrix $F_\theta \in \R^{m\times m}$ is the positive semidefinite matrix
+\begin{equation}\label{eq:ds_fisher}
+    F_\theta = \mathbb E_\x \left[\mathbb E_{y\sim p_\theta(y|\x)} \nabla_\theta \log p_\theta(y|\x) \nabla_\theta \log p_\theta(y|\x)^T \right].
+\end{equation}
+The Fisher information matrix has an information geometric interpretation as a metric relating local perturbations in parameters to changes in the model's output distribution:
+\begin{equation}\label{eq:ds_fisher_info_geom}
+    \mathbb E_\x [D_\mathrm{KL}(p_\theta(y|\x) \| p_{\theta+\delta}(y|\x))] \approx \frac12 \delta^T F_\theta \delta
+\end{equation}
+as $\delta \to \0$, where $D_\mathrm{KL}$ is the KL divergence.
+
+\subsection{Per-Example Fisher}
+Given any example $\x\in\mathcal X$, we introduce the per-example Fisher (PEF) matrix \begin{equation}
+    F_\theta(\x) = \mathbb E_{y\sim p_\theta(y|\x)} \nabla_\theta \log p_\theta(y|\x) \nabla_\theta \log p_\theta(y|\x)^T.
+\end{equation}
+It is the Fisher information matrix of the model when restricted to a single input.
+The quantity \eqref{eq:ds_fisher} is simply the expectation of the PEFs with respect to $p(\x)$, which we now call the data set Fisher (DSF) to disambiguate it from the PEFs.
+The PEF can be used to relate parameter perturbations to changes in the model's predictions $p_{\theta+\delta}(y|\x)$ for a single example $\x$ in a manner analogous to \eqref{eq:ds_fisher_info_geom}.
+
+\subsubsection{Approximations for Tractability}\label{sec:approx_tract}
+
+\paragraph{Diagonal Approximation}
+For the numbers of parameters $m$ seen typically in practice, full Fisher matrices are intractable to store since their number of entries scales quadratically with $m$.%\footnote{For PEFs, we can effectively store the PEFs exactly using $Cm$ values per example by representing it as a sum of outer products. We leave the extension of NPEFF to these full PEF representations to future work.}
+Hence it is common to use only the diagonal of the Fisher matrix instead, which takes only $m$ values to store \cite{kirkpatrick2017overcoming}.
+In this case, the PEF becomes $F_\theta(\x) \approx \Diag(\f_\theta(\x))$, where 
+\begin{equation}\label{eq:dense_pef_vector}
+    \f_\theta(\x) = \mathbb E_{y\sim p_\theta(y|\x)} \left(\nabla_\theta \log p_\theta(y|\x)\right)^2.
+\end{equation}
+Note that $\f_\theta(\x) \in \R^m$ has non-negative entries, and its entries have a 1-to-1 correspondence with the parameters $\theta$.
+Under this approximation, the magnitude of the PEF entry corresponding the $i$-th parameter $\theta_i$ represents the sensitivity of the model's predictions on $\x$ with respect to perturbations of $\theta_i$.
+Hence it can be thought of as quantifying the importance of each parameter to the prediction.
+
+\paragraph{Sparsity}
+Since the number of parameters $m$ can be very large for real world models, storing even the diagonal approximation to the PEFs for a modestly sized data set becomes intractable.
+Fortunately, we have found that most of the entries of the PEFs (and the DSF) tend to be zero or very close to zero.
+This is to be expected from prior works on model pruning \citep{hoefler2021sparsity}, which finds that most parameters are not important for the model's behavior \citep{frankle2018lottery}.
+Using a sparse approximation to each PEF thus saves immense amounts of storage space.
+In our work, we fix some value $K \in \N$ and sparsely represent each PEF using only its largest $K$ values.
+
+\paragraph{Number of Classes}
+For tasks with only a few classes, the expectation over classes in \eqref{eq:dense_pef_vector} can be computed exactly.
+However, this becomes prohibitively expensive as the number of classes increases, requiring about a backwards pass worth of computation for each class.
+We therefore seek a means to efficiently compute an approximation to the PEF in such cases.
+
+In this work, we have chosen to discard terms in the expectation whose probabilities $p_\theta(y|\x)$ are below some threshold $\epsilon$.
+Note that there is no \textit{a priori} reason why the PEFs returned by this truncated sum cannot differ significantly from the full PEF.
+When writing the expectation in \eqref{eq:dense_pef_vector} as a sum, each class contributes a term $\left(\nabla_\theta \log p_\theta(y|\x)\right)^2$ with weight $p_\theta(y|\x)$.
+Even if the latter is very small, the former could have a large magnitude and contribute significantly to the sum.
+However, we found this approximation to work well in practice and leave exploration of other methods to future work.
+
+\subsection{Non-Negative Matrix Factorization}
+% Write about the general NMF problem here and the algorithm and its implementation here before any subsubsection.
+% Maybe also do the "fitting coefficients" stuff here, mainly to mention that it can be done far faster and with far fewer computational resources than the full NMF.
+
+Given a non-negative matrix $A \in \R^{n\times m}$, non-negative matrix factorization (NMF) aims to find non-negative factors $W \in \R^{n\times r}$ and $H \in \R^{r\times m}$ such that $A \approx WH$, where the hyperparameter $r\in\N$ is the rank of the factorization.
+In this work, we used the Frobenius norm to measure the similarity between $A$ and $WH$.
+The NMF can then be expressed via the non-convex optimization problem
+\begin{equation}\label{eq:nmf_nc_opt}
+\begin{array}{ll@{}ll}
+\text{minimize}  & \|A - WH\|_F \\
+\text{subject to} & W,H \geq 0. \\
+\end{array}
+\end{equation}
+
+Much work exists on methods for solving this optimization problem.
+We chose to use multiplicative update (MU) algorithm with an implementation based on \citet{boureima2022distributed} since it is memory-efficient, can be distributed across multiple GPUs, and can handle sparse matrices.
+% See \textbf{[CREF appendix]} for information about our NMF implementation.
+% 
+% Note that \eqref{eq:nmf_nc_opt} becomes a convex optimization problem when we only optimize over a single factor while holding the other fixed.
+% % 
+% See \textbf{[CREF appendix]} for information about this and our NMF implementation.
+
+
+\subsection{Construction of the Matrix to Decompose}
+In our NPEFF setting, we assume we are given a fixed classifier model $p_\theta(y|\x)$ and a set of examples $\mathcal D = \{\x_1,\dotsc,\x_n\}$.
+We compute the PEFs for these examples and aggregate them into an $n \times m$-matrix $A$ to decompose using NMF.
+% and perform an NMF on it to get factors $W \in \R^{n\times r}$ and $H \in \R^{r\times m}$, where the rank $r$ is a hyperparameter.
+
+\subsubsection{PEF Normalization}
+During initial experimentation, we found that constructing $A$ using the raw PEFs led to most of the components recovered via NMF to appear to be tuned to outlier examples.
+We suspect that outlier examples tend to have PEFs with large magnitudes, and thus their contributions dominate the NMF reconstruction loss.
+
+To rectify this, we normalized each PEF to have roughly unit L2 norm.
+More precisely, we used the L2 norm of the PEF \textit{before} sparsification to perform the normalization.
+This has the effect of de-emphasizing examples for which the sparse approximation is poor; however, we expect any difference in the outcome to be minimal.
+
+\subsubsection{Column Pruning}
+Columns of the aggregate PEF matrix $A \in \R^{n\times m}$ correspond to parameters of the model.
+Since each PEF was made sparse before inclusion into this matrix, many of its columns contain no or very few non-zero entries.
+Since our NMF implementation requires representing the matrix factors as dense matrices, those columns can cause the amount of memory needed to store $H \in \R^{r\times m}$ to balloon.
+However, we suspect near-empty columns do not contain enough effective ``data-points'' to contribute meaningfully to the factorization.
+Hence we pruned columns of $A$ containing fewer than some small number of non-zero entries to be able to include more examples in the factorization.
+We leave experimentation with alternate column-removal metrics, such as the column-wise sum or max, to future work.
+
+\subsection{Recovered Non-Negative Factors}
+Running NMF on the aggregate PEF matrix $A$ will return the two non-negative factors $W \in \R^{n\times r}$ and $H \in \R^{r\times m}$ such that $A \approx WH$.
+We call $W$ the coefficient matrix and $H$ the pseudo-Fisher matrix.
+Each of $r$ recovered components will have a column $\w_i \in \R^n$ and row $\h_i \in \R^m$ from the respective matrices associated to it.
+
+
+Note that we can multiply any row of $H$ by a positive factor as long as we multiply the corresponding column of $W$ by its inverse without changing their product.
+Hence we normalize all rows of $H$ to have unit L2 norm and rescale the columns of the coefficient matrix $W$ accordingly.
+This puts the coefficients of all components on roughly the same scale and allows us to make meaningful comparisons between components.
+
+\subsubsection{Coefficient Matrix}
+The coefficient matrix $W \in \R^{n\times r}$ defines the relationship between individual examples and components.
+Each entry $W_{ij}$ represents the contribution of the $j$-th component to the PEF of the $i$-th example.
+% We can look at rows of $W$ to 
+
+The coefficient matrix allows us to get a qualitative understanding of the sub-computation associated to each component.
+Given a component, we create a list of the examples sorted by the component's coefficient and look at the ones with the highest coefficients.
+Those top examples often display some sort of interpretable pattern from which we can infer what processing the component represents.
+% Note that an example having a high coefficient for a 
+
+
+% Something about using rows of $W$ to see what components contribute to an example.
+
+\subsubsection{Pseudo-Fisher Matrix}
+The pseudo-Fisher matrix $H \in \R^{r\times m}$ allows us to map components onto parameter space.
+% Each of its rows $\h_i\in\R^m$ provides a 
+Each entry $H_{ij}$ indicates the importance of the $j$-th parameter to the processing represented by the $i$-th component.
+We can thus interpret rows of $H$ as Fisher information vectors for their corresponding components.
+
+More formally, consider some small perturbation $\delta \in \R^m$ of the model's parameters.
+Let $\x_i \in \mathcal D$ be some example.
+By combining the information geometric interpretation of the PEF with its approximation via the NMF factors, we get
+\begin{equation}\label{eq:pef_nmf_info_geom}
+D_\mathrm{KL}(p_\theta(y|\x_i) \| p_{\theta+\delta}(y|\x_i)) \approx \frac{\alpha_i}2 \sum_{j=1}^r W_{ij}\h_j^T \delta^2,
+\end{equation}
+where $\delta^2 \in \R^m$ is the entry-wise square of the perturbation and $\alpha_i \in \R$ is the norm of the example's PEF.
+The term $\frac{\alpha_i}2 W_{ij}\h_j^T \delta^2$ can be thought of as the contribution that the disruption of the $j$-th component provides to the overall change in predictions for the example.
+
+From a practical perspective, we found that most entries of $H$ tend be zero or very close to zero.
+We thus represent it sparsely and removal all entries with values below a fixed threshold.
+This greatly reduces the costs associated with storing and processing it.
+% We can use 
+% The information geometric interpretation of the Fisher allows us to then write
+% For a given example, we can use its PEF to relate this to the change in the model's predictions
+% The information geometric interpretation of the PEF allows us to relate this to change in the model's predictions for any given example.
+% Using our NMF decomposition, we can approximate [its/the] PEF as
+
+\subsection{Fitting Coefficients}\label{sec:fitting_coeffs}
+Once we have computed the pseudo-Fisher matrix $H$, we can use it to compute component coefficients for examples other than those used to learn it.
+Let $\x\in\mathcal X$ be an arbitrary example, and let $\f\in\R^m$ be its PEF.
+Plugging this in to \eqref{eq:nmf_nc_opt}, we get the optimization problem of minimizing $\|\f - H^T\w\|_2$ subject to $ \w \geq 0$,
+which \textit{is} convex.
+An extremely efficient solver can be derived from the full MU NMF algorithm.
+See \cref{sec:coeff_fitting_details} for details on its implementation.
+% The full MU NMF algorithm can easily be adapted to efficiently solve this optimization problem
+% Given a pseudo-Fisher matrix $H$
+
+% Being able to fit component coefficients for arbitrary examples allows us to c
+Importantly, this allows us to look at the top examples of components using data sets other than the one used to learn them.
+In this paper, we do this for similar reasons as one would use a validation set in typical machine learning: we can verify that component tunings are not simply the result of overfitting.
+While we do not explore this in this work, this can also be used to see how component tunings vary across different data sets \citep{bolukbasi2021interpretability}.
+
+\subsection{Perturbations}\label{sec:methods_perturbations}
+% TODO: Maybe there is a better title for this subsection.
+% An important property of 
+% It is important to be able to verify that the interpretations 
+An important property of any interpretability method is that its interpretations faithfully reflect the actual workings of the model, which is referred to as \textit{trustworthiness} by \citep{li2022interpretable}.
+% The two major interpretability claims of NPEFF are the
+NPEFF makes claims about the mapping of sub-computations to specific parameters and what sub-computations are used to inform the predictions of specific examples.
+% The two main claims of NPEFF are the mapping sub-computations to parameters and 
+% A key claim of NPEFF is the relationship between the 
+% recovered parameter salience maps and sub-computations performed by the model. *and their use to inform predictions on certain examples.
+The interpretation of rows of $H$ as Fisher information vectors for their respective components provides a theoretically principled way to verify these claims via parameter perturbations.
+
+Consider the $j$-th component with pseudo-Fisher $\h_j \in \R^m$.
+Suppose we found some perturbation such that $\delta \in \R^m$ such that $\h_k^T\delta^2$ is large when $k=j$ and is small otherwise.
+From \eqref{eq:pef_nmf_info_geom}, we see that such a perturbation should selectively affect the model's predictions on the top examples of the $j$-th component.
+If we find such a perturbation, we can verify the claims made by NPEFF about its recovered components by comparing the average KL-divergence of the perturbed model's predictions on top component examples to the average KL-divergence across the entire data set.
+
+
+
+% we see that the KL-divergence in the model's predictions for the $i$-th example should be proportional to $\alpha_iW_{ij}$.
+% % By finding such a perturbation and relating the KL-d
+% We can thus verify the claims made by NPEFF about its recovered components by finding such a perturbation vector and relating the KL-divergence of the perturbed model's predictions to component coefficients.
+% % we can see that finding some perturbation $\delta \in \R^m$ such that $\h_k^T\delta^2$ is large for $k=j$ and small otherwise
+
+\subsubsection{Fisher-Weighted Parameter Averaging}
+We make use of a method based on the Fisher-weighted parameter averaging (FWPA) introduced by \citet{matena2021merging} to construct such a perturbation.
+Let $\theta \in \R^m$ be the parameters of the original model, and let $\f \in \R^m$ denote the DSF of the original model with respect to the entire data set.
+Let $\h\in\R^m$ denote the pseudo-Fisher of the component we wish to perturb.
+% Our FWPA-based perturbation method takes in 
+% Let $\theta_i \in \R$ be the value of one of the original parameters, and let $f_i \in \R$ denote its corresponding entry in the DSF of the model with respect to the entire data set.
+
+Our FWPA-based perturbation method takes in the following hyperparameters: perturbation magnitude $\delta > 0$, merging coefficient $\lambda \in [0, 1]$, and sign-pattern $\s \in \{-1,1\}^m$.
+The parameters $\phi\in\R^m$ of the perturbed model are provided element-wise by
+\begin{equation}\label{eq:fwpa_perturb}
+    \phi_i = \frac{(1 - \lambda) f_i \theta_i + \lambda h_i(\theta_i + s_i \delta)}{(1 - \lambda) f_i + \lambda h_i},
+\end{equation}
+where we default to having $\phi_i = \theta_i$ when both $f_i,h_i$ are approximately zero.
+This can be interpreted as the Fisher-weighted merge of the original model with a corrupted version where each parameter has been shifted by a magnitude of $\delta$.
+We can think of the perturbed parameters as being closer to their original values when more important to the original model's behavior and farther away when more important for the given component.
+This has the effect of selectively altering the model's predictions for examples on which it uses the component's corresponding sub-computation.
+
+\paragraph{Sign Pattern}
+
+The need for the sign pattern hyperparameter arises from the expression \eqref{eq:pef_nmf_info_geom} for the KL-divergence of perturbed predictions from their originals depending only on the element-wise square of the perturbation.
+Different choices of the sign pattern will result in different distributions over classes that all should have the same KL-divergence with the original predictive distribution.
+The invariance of the KL-divergences to the choice of sign pattern, however, can break down when we consider the finite perturbations used in practice instead of the infinitesimal perturbations of the theory.
+% This is most prevalent for examples whose predictive distributions are highly concentrated on a single class.
+% It is generally easier to increase the KL-divergence by increas
+% The maximum KL-divergence that can be achieved by increasing the probability of that class is far smaller than what can be achieved by redistributing its probability mass to the other classes.
+% See \textbf{[CREF: Appendix]} for a worked out example in the case of two classes.
+
+To choose a sign pattern, we assume that we have some set of examples $\mathcal D_\mathrm{p} = \{\x_1,\dotsc,\x_\ell\}$ whose predictions we wish to selectively perturb.
+This will typically be the top examples for a component.
+For each parameter, we would want to move in the direction that increases the KL-divergence of the model's predictions on these examples the most.
+Hence, we use a sign vector given element-wise by
+\begin{equation}
+    s_i = \sign \frac{\partial}{\partial \theta_i}\sum_{j=1}^\ell D_\mathrm{KL}\left(\operatorname{\text{\texttt{sg}}}\left[p_\theta(y|\x_j)\right] \| p_{\theta}(y|\x_j)\right) ,
+\end{equation}
+where the \texttt{sg} is the stop-gradient operator.
+
+\paragraph{Other Hyperparameters}
+Once we had chosen a sign pattern, we then found hyperparameters $\delta,\lambda$ such that the average KL-divergence for the chosen examples $\mathcal D_\mathrm{p}$ belonged to some predetermined range.
+We accomplished this via a randomized search heuristic detailed in \cref{sec:hyperparameter_heuristic}.
+
+\paragraph{Confounding Factors and Controls}
+Our goal is to verify that the parameters highlighted by a component's pseudo-Fisher are indeed selectively important for the processing of examples with a large coefficient for that component.
+While we aim to accomplish this via perturbation experiments outlined in this section, there are two potential confounding factors: the norm of the PEFs and information leaking from the sign pattern.
+
+Looking at \eqref{eq:pef_nmf_info_geom}, we see that the expected KL-divergence of a model's predictions on an example is proportional to the norm of its PEF.
+Although the component coefficients we use to order examples come from normalized PEFs, it is possible that they are correlated with the norms of PEFs.
+Therefore when comparing the average KL-divergence of a group of examples to the dataset-wide average, we also report the ratio of the selected examples' average PEF norm to the average PEF norm of the entire data set.
+
+% We can see if any information about the component top examples leaks 
+% To rule out that information leaked from the examples used in generating the sign pattern 
+We can see the influence of the examples used to compute the sign pattern by running a control experiment.
+Namely, we select a random group of examples and use them instead of the component top examples to compute the sign pattern.
+By comparing the ratio of the average KL-divergence on those examples to the dataset-wide average, we can see if their predictions are selectively altered.
+
+\subsubsection{Other Perturbation Experiments}\label{sec:other_pert_exps_methods}
+
+With some modifications, we can also adapt this method to test properties of the example groups given by NPEFF as the top examples of component.
+Again, we are given a group of examples whose predictions we want to selectively perturb.
+The difference is that we use the DSF of that set of examples instead of a component's pseudo-Fisher in the FWPA \eqref{eq:fwpa_perturb}.
+% Given a sufficiently large set of examples to perturb, we hypothesize 
+Comparing the results when using a random group of examples to using the top examples of a component, we hypothesize that the top components of an example will be easier to selectively perturb.
+% The DSF of the component top examples should be concentrated on the parameters important to a single sub-computation exclusive to the group.
+The DSF of random examples will be spread roughly equally amongst many sub-computations not unique to the group, so perturbing them will influence the model's predictions on many other examples.
+% This is because they should roughly correspond to the set of examples that use a particular sub-computation in their processing.
+% A random group of examples, by contrast, 
+% \textbf{[TODO: explain why]}
+
+
+% ${}$
+
+% ${}$
+
+% ${}$
+
+% % The selection process for the hyperparameters depends on the goals of the perturbation experiment.
+% % We discuss the two main flavors of perturbation experiment conducted in this paper and their hyperparameter selection methods in the remainder of this section. 
+% % We discuss how to choose the sign pattern along with the other hyperparameters in the remainder of this section depending on our goals.
+
+% \paragraph{Example-Unaware}
+% One of our goals is to verify that the parameters highlighted by a component's pseudo-Fisher are indeed selectively important for the processing of examples with a large coefficient for that component.
+% For the strongest test, we should not use information derived from the coefficient matrix to produce the perturbation.
+% Hence for these experiments, we simply sampled the sign vector from a uniform distribution.
+
+% Once we had selected the sign vector, we then found hyperparameters $\delta,\lambda$ such that
+% \textbf{[TODO]}.
+% % Something about for speed, we often used a fixed random subset of the data set to compute the KL-divergence.
+% We accomplished this via a randomized search heuristic detailed in \textbf{[CREF: Appendix]}.
+
+
+
+% % When verifying the relationship between prediction changes resulting from parameter perturbations and component coefficients, we wish to use as little information as possible from the examples when constructing the perturbation.
+% % In this case, we simply choose the sign pattern for each parameter uniformly at random.
+
+% % The parameters $\delta,\lambda$ are fit by first selecting a target range for the average KL-divergence of model predictions across the data set.
+
+% \textbf{[TODO: Something about how we re-ran/re-sampled multiple times. (then say we did roughly the same as here and discuss only differences when talking about the same thing in the example-guided perturbations)]}
+
+% \paragraph{Example-Guided}
+% We also explore selective-perturbation methods where we can take into account the top examples for a given component.
+% Generically, this method assumes that we have some set of examples $\mathcal D_\mathrm{p} = \{\x_1,\dotsc,\x_\ell\}$ whose predictions we wish to selectively perturb.
+% For each parameter, we would want to move in the direction that increases the KL-divergence of the model's predictions on these examples the most.
+% Hence, we use a sign vector given element-wise by
+% \begin{equation}
+%     s_i = \sign \frac{\partial}{\partial \theta_i}\sum_{j=1}^\ell D_\mathrm{KL}\left(\operatorname{\text{\texttt{sg}}}\left[p_\theta(y|\x_j)\right] \| p_{\theta}(y|\x_j)\right) ,
+% \end{equation}
+% where the \texttt{sg} is the stop-gradient operator.
+% % 
+% Like the Example-Unaware method, this method can be used to test the relationship between; however, it requires controls to ensure that the information about the examples contained within the sign pattern is not responsible for the results.\footnote{\textbf{[TODO]} The actual control would involve creating sign patterns from random group of examples, using a component's pseudo-Fisher, and comparing the relative change in predictions for the random examples, the component's top examples, and the entire data set. The random example Fisher experiments kinda serve a similar purpose, but it'd be best to have these experiments explicitly in the paper.}
+
+% With some modifications, we can also adapt this method to test properties of the example groups given by NPEFF as the top examples of component.
+% Again, we are given a group of examples whose predictions we want to selectively perturb.
+% The difference is that we use the DSF of that set of examples instead of a component's pseudo-Fisher in the FWPA \eqref{eq:fwpa_perturb}.
+% % Given a sufficiently large set of examples to perturb, we hypothesize 
+% Comparing the results when using a random group of examples to using the top examples of a component, we hypothesize that the top components of an example will be easier to selectively perturb.
+% % This is because they should roughly correspond to the set of examples that use a particular sub-computation in their processing.
+% % A random group of examples, by contrast, 
+% \textbf{[TODO: explain why]}
+
+% \textbf{[TODO: Rework with what I am doing now, say how we measure selectivity (KL ratio), note possible confounders of fisher norm being correlated with high coefficients and info leaked via sign pattern, how we either control these or test if they have an effect.]}
+% \textit{I'll probably also want to separate out the examples-DSF ablation set-up and reasons slightly more clearly.}
+
+% Note that the group of examples only determines the per-parameter direction of the offset in this set-up.
+% While weaker than the Example-Unaware style of perturbation, this method can 
+
+
+
+
+% In some cases, we have some set of examples whose predictions we wish to selectively perturb.
+% Weaker test of relationship tested by example-unaware perturbations. However for some components, the exact direction of the perturbation can matter.
+% Can also explore properties of the groupings of examples formed by the top examples of each component.
+% Can also use this to start looking into the application of using NPEFF to selectively alter a model's behavior.
+
+% \textbf{[TODO]}
+
+
+
+% Given the pseudo-Fisher of some component $\h$, 
+
+% $h_i$ be the corresponding entry in the pseudo-Fisher of some component (or something taking the role, maybe mention in next sentence that sometimes we try things other than the exact pseudo-Fisher), have $\delta > 0$, $\lambda \in [0, 1]$, and $s_i \in \{-1,1\}$ be hyperparameters
+
+% \subsection{Caveats and Limitations}
+% \textbf{[TODO]} \textit{Maybe have this stuff here or in the discussion section or even in the appendix.}
+% Stuff like there is nothing that keeps "true" components from being duplicated and/or split across multiple recovered components.
+% Also like ideally the components would correspond to orthogonal directions in parameter-space, which might not make sense in this set-up. However, factoring the set of PEF matrices (instead of their diagonals) might allow this, either just for "theoretical betterment" or as potential future research direction.
+% Having to choose the rank as a hyperparameter. Rigorous methods do exist, but often involve doing the NMF a bunch of times. Mention our heuristics if $r$ is chosen too high (start to see components that are basically active only on a single example).
+
+
+% Need to put some stuff on analysis methods somewhere, maybe as subsections here or as own top-level section.
+
+% \textbf{[TODO: Combine the next two sections, maybe with a bit of the third one after.]}
+
+\section{Results}
+% We ran experiments on both NLP and vision models.
+We ran NPEFF on both an NLP model and a vision model.
+After performing the decomposition, we examined component tunings and then performed perturbation experiments.
+
+\subsection{Set-Ups}
+For both models, we performed the NMF decomposition using some subset of examples. We then used the recovered pseudo-Fisher matrices to fit coefficients to a disjoint set of examples from the same data set as detailed in \cref{sec:fitting_coeffs}. Unless explicitly mentioned otherwise, we used this second set of examples and their component coefficients for analysis in this paper.
+
+\subsubsection{NLP}
+We used BERT-base fine-tuned on the MNLI natural language inference (NLI) task as our NLP model \citep{devlin2018bert, mnli}.
+In particular, we used the \texttt{connectivity/feather\_berts\_0} checkpoint from the HuggingFace repository \citep{mccoy2019berts, wolf2019huggingface}.
+NLI tasks involve seeing whether a given hypothesis is implied by, contradicted by, or neutral with respect to a given hypothesis.
+Thus, this is a classification task with 3 classes.
+
+For the data set, we decided to use the train split of the SNLI task \citep{bowman2015large}.
+Like MNLI, SNLI is also an NLI task with the main difference being that SNLI examples come from a single domain while MNLI has examples from multiple domains.
+% Our model achieves an SNLI validation set accuracy of \textbf{[TODO]} compared to an accuracy of \textbf{[TODO]} of a BERT-base fine-tuned on only SNLI.
+We chose to use a different data set as we wanted to run NPEFF using examples not seen during training.
+This is to be sure that the recovered components reflect generalized processing strategies learned by the model instead of groups of examples the model has overfit to.
+% Since the MNLI-trained model 
+% We do not believe that this domain shift had a 
+
+Since SNLI has only 3 classes, we computed PEFs using the exact expectation over classes.
+Each PEF was sparsified to contain only its top 65,536 values.
+We learned the NMF using 50k examples and then used it to fit coefficients to another set of 50k examples.
+We used 512 as the rank of the factorization and ran the NMF for 1250 iterations.
+We pruned columns contained fewer than 10 non-zero entries before performing the NMF.
+
+\subsubsection{Vision}
+We used a ResNet-50 \citep{he2016deep} trained on the ImageNet classification task \citep{imagenet}, namely the \texttt{imagenet} pretrained weights of the \texttt{ResNet50} class in TensorFlow \citep{abadi2016tensorflow}.
+ImageNet involves classifying an image as one of 1000 fine-grained classes.
+We used ImageNet 2012 challenge data to gather examples for NPEFF.
+We only included terms with a probability of greater than 3e-3 when performing the expectation over classes in the PEF computation as discussed in \cref{sec:approx_tract}.
+Each PEF was sparsified to contain only its top 65,536 values.
+We learned the NMF using 20k examples from the train split and then used it to fit coefficients to 30k examples from the validation set.
+The rank of the factorization was 512, and we ran it for 2500 iterations.
+Columns with fewer than 6 non-zero entries were pruned before performing the NMF.
+
+
+\subsection{Component Tunings}
+
+
+\begin{figure*}[ht]
+\centering
+\begin{minipage}{.59\textwidth}
+\begin{flushleft}
+
+\textsc{Component 121:}\\
+
+\begin{scriptsize}
+\snlimainex
+{A man wearing a blue denim shirt is standing in front of a man who is squirting a \textbf{condiment} on something.}
+{A man wearing a blue denim shirt is standing in front of a man putting a \textbf{condiment} on \textbf{food}.}
+% 
+\snlimainex
+{A man in a blue t - shirt is cutting a \textbf{steak} in half with a knife and fork.}
+{A man is killing an animal.}
+% 
+\snlimainex
+{An older gentleman standing at a jewelry counter writing a receipt.}
+{The gentleman is writing a \textbf{food} recipe.}
+% 
+\snlimainex
+{Carrying a large basket, a man navigates his way through the street.}
+{A man is carrying his \textbf{food} in a basket.}
+% 
+\end{scriptsize}
+\begin{small}{
+% \setstretch{.5}
+The top examples of this component all have something to do with food.
+The model makes predictions from all 3 classes on this component's top examples.} \vspace{3mm} \\
+\end{small}
+
+\textsc{Component 345:}\\
+\begin{scriptsize}
+\snlimainex
+{Adults look at an \textbf{artistic image} in a museum.}
+{The adults look at the \textbf{\textit{mona lisa} painting}.}
+% 
+\snlimainex
+{A woman wearing \textbf{glasses} poses for the camera with three men.}
+{The woman is wearing \textbf{\textit{sun} glasses}.}
+% 
+\snlimainex
+{A young girl happily running through a park clutching her \textbf{purse} and toy baby.}
+{The young girl clutches her \textbf{\textit{prada} purse}.}
+% 
+\snlimainex
+{A young girl with face paint hitting a \textbf{pinata} while other children watch.}
+{A young girl is hitting a \textbf{\textit{hippo} pinata}.}
+\end{scriptsize}
+\begin{small}
+The model correctly predicted ``neutral'' for these examples.
+The hypothesis is consistent with the premise but includes additional information that cannot be inferred from the premise.
+\end{small}
+\end{flushleft}
+\end{minipage}%
+% 
+% 
+% 
+\begin{minipage}{.39\textwidth}
+\centering
+
+\textsc{Component 36}\\
+
+\includegraphics[width=0.8\textwidth]{images/comp36_top_ex_main.png} \vspace{-2mm} \\
+\begin{flushleft}
+\begin{small}
+The very top examples are school buses.
+High-ranking examples include yellow vehicles.
+\end{small}
+\end{flushleft}
+
+\textsc{Component 218}\\
+
+\includegraphics[width=0.8\textwidth]{images/comp218_top_ex_main.png} \vspace{-2mm} \\
+\begin{flushleft}
+\begin{small}
+The very top examples are zebras.
+High-ranking examples include various striped animals.
+\end{small}
+\end{flushleft}
+
+\end{minipage}
+\caption{%
+Top examples for some NLP and vision components.
+The examples presented for the NLP components are the ones with the top 4 highest coefficients.
+The top two rows for each vision component are the examples with the 8 highest coefficients.
+The bottom row for each vision component contains selected examples from the set of top 32 examples.
+}
+\label{fig:main_interprets}
+\vskip -0.2in
+\end{figure*}
+
+For both models, we found that many if not most of the components appeared to have some potential interpretable tuning.
+We present the top examples of some components in \cref{fig:main_interprets} for both the NLP and vision models.
+More examples of tuned component top examples are provided in \cref{sec:additional_tunings}.
+
+Some components for the NLP model appeared to be tuned to strategies of solving the NLI task for specific types of examples.
+These were typically selective for one of the predictions, and the top examples all contained some common task-specific group of features.
+Other components appeared to be tuned for features not directly related to the task.
+The model typically made mixed predictions on the top examples of these components.
+Many components displayed a combination of these two tuning styles.
+
+Many components for the vision model had tunings that included relatively low-level features such as color, shape, and spatial patterns.
+More abstract, high-level features also played in a role in the tunings of many components.
+These range from broad, coarse-grained attributes such as the general category of the image subject (e.g.\ animal, plant, vehicle, architecture, technology, etc.) to more specific, fine-grained attributes such as the fur patterns of dogs.
+Many of the components had tunings that included both low-level and high-level features.
+In those cases, the low-level features were often predictive of the higher level ones.
+
+It is important to note that our analysis of component tunings is fundamentally qualitative.
+It can be difficult to determine whether a group examples contain some common concept \citep{bolukbasi2021interpretability}.
+Furthermore, it is possible that the model achieves its predictions via strategies not readily interpretable by humans \citep{dalvi2022discovering}.
+In future work, we hope to adapt interpretability methods that determine salience of inputs features to a model's predictions to show input feature importance to the sub-computation represented by a component.
+This can make interpreting components clearer and can potentially provide further insights into how the model processes examples.
+
+% While some of the components display clear tunings, others can
+
+% Most of the vision components appeared to have some type of tuning.
+% Relatively low-level features such as color, spatial patterns, and shape played a role in some tunings.
+% More abstract aspects of the image subject also often played a role.
+% These varied from coarse-grained aspects such as animal, vehicle, or architecture to fine-grained aspects such as dogs with a similar morphology.
+% Many components were tuned to a mixture of \textbf{[TODO, probably make what I have so far clearer, do I state examples?]}
+% Oftentimes, the lower-level features of a component's tuning would be predictive of the higher-level features that it was tuned to, which includes class label.
+
+% Spatial frequency, general color/shading, generally features that can related to class identity, similar shapes (e.g. sunglasses and car mirrors)
+
+% Some components appeared to tuned to combination of category (eg animal/mammal/dog or vehicle) and another attribute such as color.
+
+% \textbf{TODO: MOVE THE MESSAGE OF THE STUFF BELOW TO THE METHODS SECTION? OR NOT?}
+
+
+% \textbf{[TODO: Kinda spitballing here, re-write/move what I have to be more coherent with rest of paper and cleaner.]}
+
+% For both models, we found that many if not most of the components appeared to have some potential interpretable tuning.
+% % However, 
+% Since we accomplished this by looking at the top examples for components, it is possible to misinterpret tunings or miss tuned components altogether \textbf{[CITE some works]}.
+% It is possible that some apparently untuned components are the combination of multiple ``true'' components.
+% It is also possible that the model achieves its predictions via strategies not readily interpretable by humans, which can indicate either an incorrect heuristic or an actual alternate way of solving the task.
+% It is also possible that they just reflect noise.
+% % 
+% In future work, we hope to adapt interpretability methods that give salience maps over input features to a model's predictions for individual examples to provide us with importance maps of input features to a particular feature in individual examples.
+% This can make interpreting components clearer and can potentially provide further insights into how the model processes examples.
+% This may be particularly important when using NPEFF for scientific discovery.
+% \textbf{[TODO]}
+
+% \textbf{[TODO]}
+
+\subsection{Perturbations}
+We ran parameter perturbation experiments using component pseudo-Fishers as described in \cref{sec:methods_perturbations} for both the NLP and vision models.
+We ran experiments on around 230 components for the NLP model and 100 components for the vision model.
+These components corresponded roughly to the ones with the highest average coefficient value.
+We used the top 128 examples from each component to compare their average KL-divergence to the average across the entire data set.
+These examples were used to compute the sign pattern, and we selected the $\delta,\lambda$ hyperparameters such that their average KL-divergence was between 0.25 and 0.35.
+% 
+For control experiments, we selected 128 random examples to take the place of top component examples.
+On the NLP model, we selected these examples such that the model would make the same number of predictions of each class as it did for the 128 top component examples.
+For the vision model, the control examples were chosen uniformly at random.
+The $\delta,\lambda$ selection process was repeated 6 times per component with the random examples being resampled each time for the controls.
+
+\begin{table}[t]
+\caption{%
+KL-divergence ratios for the main perturbation experiments. The S.P.\ Ex.\ column denotes what examples were used to compute the sign pattern. The Ratio Ex.\ column indicates what set of 128 examples the ratios correspond to.}
+\label{table:h_kl_ratios}
+\vskip 0.15in
+\begin{center}
+\begin{small}
+\begin{sc}
+\begin{tabular}{ccccc}
+\toprule
+Domain & S.P.\ Ex.\ & Ratio Ex.\ & Mean & Median \\
+\midrule
+  & Top & Top & 3.91 & 5.26 \\
+NLP & Rand.\ & Rand.\ & 1.04 & 1.17 \\
+ & Rand.\ & Top & 1.39 & 2.01 \\
+\midrule
+  & Top & Top & 4.76 & 4.81 \\
+Vision & Rand.\ & Rand.\ & 1.50 & 1.44 \\
+ & Rand.\ & Top & 2.50 & 2.53 \\
+\bottomrule
+\end{tabular}
+\end{sc}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\begin{table}[t]
+\caption{Ratios of the average PEF norm of the top 128 component examples to the average across the entire data set.}
+\label{table:pef_ratios}
+\vskip 0.15in
+\begin{center}
+\begin{small}
+\begin{sc}
+\begin{tabular}{ccc}
+\toprule
+Domain & Mean & Median \\
+\midrule
+NLP & 0.57 & 1.23 \\
+Vision & 0.99 & 1.05 \\
+\bottomrule
+\end{tabular}
+\end{sc}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+We present the results for these experiments in \cref{table:h_kl_ratios}.
+To get the scores, we first computed the geometric mean of the ratios obtained from multiple runs from each component.
+We then took either the geometric mean or the median of these per-component ratios.
+Histograms of the logarithm of these per-component ratios are provided in \cref{sec:histograms}.
+We also looked at the ratio of the average PEF norm of the top 128 examples per component to the dataset-wide average PEF norm.
+The geometric mean and median of these per-component values are presented in \cref{table:pef_ratios}, and their histograms can be found in \cref{sec:histograms}.
+
+In both settings, we were able to selectively perturb the model's predictions on the top component examples.
+The control experiments indicate that very little information about the top examples was leaked via their use in determining the sign pattern.
+Even using random examples to create the sign pattern, the component top examples had their predictions selectively altered although less selectively than when using the top examples to create the sign pattern.
+Vision component coefficients were generally uncorrelated with PEF norms.
+The NLP components had a long tail of components whose top examples had low PEF norms.
+These components tended be selective for predictions of a single class.
+Excluding these components, the NLP components tended to be slightly correlated with PEF norm.
+However, this correlation was not big enough to fully explain their selective perturbations.
+
+\subsubsection{Other Perturbation Experiments}
+We also ran perturbation experiments of the style mentioned in \cref{sec:other_pert_exps_methods} for the NLP model.
+Again, we selected either the top 128 examples for a component or 128 examples at random.
+We also fit the $\delta,\lambda$ hyperparameters such that the average KL-divergence of the model's predictions on the selected examples was between 0.25 and 0.35.
+We did this 6 times per component and resampled the random examples each time.
+
+\begin{table}[t]
+\caption{%
+KL-divergence ratios for the alternate perturbation experiments. The bottom row uses the component's pseudo-Fisher instead of the DSF of top examples.
+}
+\label{table:ex_dsf_ratios}
+\vskip 0.15in
+\begin{center}
+\begin{small}
+\begin{sc}
+\begin{tabular}{cccc}
+\toprule
+Fisher & Examples & Mean & Median \\
+\midrule
+DSF & Top & 3.83 & 4.29 \\
+DSF & Rand\. & 1.48 & 1.64 \\
+pF & Top & 3.91 & 5.26 \\
+\bottomrule
+\end{tabular}
+\end{sc}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+We present the results of the experiment in \cref{table:ex_dsf_ratios} along with histograms of log ratios in \cref{sec:histograms}.
+We were able to perturb the model's predictions on component top examples using the DSF with significant selectivity.
+In contrast, random examples were able to be perturbed with only slight selectivity.
+When we compare using a component's pseudo-Fisher to using the DSF of its top examples, we see that the former is slightly more selective than the latter.
+This makes sense since the DSF will contain contributions from sub-computations not exclusive to the top examples.
+
+% We were able to perturb the predictions on random samples with only slight selectivity.
+% In contrast, the
+% The bottom row of the table comes from the \cref{table:h_kl_ratios}
+
+% In \textbf{[CREF Table]}, we also include the results from the previous section where we used the component pseudo-Fisher instead of the DSF of its top examples as \textbf{[TODO: col/row name]}.
+% \textbf{[TODO: Discuss results.]}
+
+
+\section{Related Works}
+Methods reliant on ranking or grouping examples are common in the interpretability literature.
+Typically, the activation value of a single neuron is a frequently used metric to derive such rankings \citep{sajjad2022neuron, bolukbasi2021interpretability, bau2017network, szegedy2013intriguing}.
+However, there has been work done on alternative methods.
+\Citet{dalvi2022discovering} make use of agglomerative clustering on token-level BERT representations to find groups of representations corresponding to concepts.
+\Citet{michael2020asking} makes use of a supervised probing task to learn latent interpretable representations.
+\Citet{voynov2020unsupervised} unsupervisedly find interpretable directions in the latent space of a GAN.
+
+% \textbf{[TODO: See if there is anything similair to above for images.]}
+
+\Citet{olah2018the} and \citet{alammar2020explaining} make use of NMF in the interpretability of vision and NLP models, respectively.
+They factor matrices created from the activations of a single example with dimensions corresponding to things like spatial dimensions and sequence position.
+Like in this work, they suggest that factors provide a good interface for humans to interpret models.
+However, their methods can only provide interpretations for single examples.
+
+Dataset-level Fisher information matrices have been explored before in natural gradient descent \citep{martens2020new}, continual learning \citep{kirkpatrick2017overcoming}, and cross-model knowledge transfer \citep{matena2021merging}.
+However, our use of per-example Fisher information appears novel.
+
+% ${}$
+
+% ${}$
+
+% ${}$
+
+% % Interpretability methods based on c
+
+% % The following looks like we can kinda relate to our idea of clustering: https://aclanthology.org/2022.naacl-main.225.pdf
+
+
+% % https://arxiv.org/pdf/2104.07143.pdf
+% % https://arxiv.org/pdf/2010.02695.pdf
+% % https://arxiv.org/pdf/1711.11279.pdf
+
+% % Maybe: https://arxiv.org/pdf/2006.08564.pdf
+
+% The idea of interpreting model-derived quantities by using them to rank examples taken from a corpus appears in many prior works.
+
+
+
+% The idea of identifying concepts with groups of examples has been explored before by \textbf{[CITE]}.
+% Typically, previous works have obtained these groups by ranking examples by the activations of a single neuron or, more generally, directions in activation space.
+
+% These directions are often found through supervised training of a simple classifier to predict some user-determined example attribute.
+
+
+% % Some previous have explored using 
+% % 
+% \textbf{[CITE]} has looked at the unsupervised discovery of interpretable directions in latent space for generative models.
+% % Although they use a method based on \textbf{[TODO]}, they, like us, look to uncover representations
+
+% % Look at the following for review of neuron-level interpretations of deep models. 
+% % https://arxiv.org/pdf/2108.13138.pdf
+
+% Previous works have attempted interpretation-guided modification of model weights.
+% Typically, these works tie neurons to concepts, and parameter modifications take the form of zeroing out those neurons.
+% % https://arxiv.org/pdf/1811.01157.pdf
+% % https://proceedings.neurips.cc/paper/2020/file/c74956ffb38ba48ed6ce977af6727275-Paper.pdf
+
+% Dataset-level Fishers have been used before for \textbf{[CITES]}.
+
+% % Stuff where you look at top examples for a neuron or something. Also the paper where groups represent concepts. Might want to mention that such stuff gets harder when you have "parameter sharing". See if there is any other work that does more complicated function of activaiton space?
+
+% % Stuff that attempts to find unsupervised directions in latent span for generative models. The unsupervidenss is how it is related to us.
+
+% % Making interpretation-guided changes to model parameters? Mention stuff like LIME (and its global versions) that creates a local proxy model with interpretable parameters. Maybe we are first that sort of allows you to make such changes to deep models.
+
+% % Anything with Fisher (EWC, merging, FISH mask?, etc.). Maybe say we are first to use per-example FIshres? (if we are)
+
+% % Read first paragraph of related works section in https://aclanthology.org/2020.emnlp-main.398.pdf for some references to look at.
+
+% % https://arxiv.org/pdf/1811.01157.pdf for possibly interpretation-guided manipulatation at neuron level?
+
+\section{Conclusion}
+In this paper, we introduced a novel interpretability method called NPEFF.
+Applicable to any model with differentiable parameters, NPEFF works by performing NMF on the matrix created by the PEFs of the examples in a data set.
+We empirically validated NPEFF through experiments on NLP and vision models.
+In particular, we demonstrate component tunings by looking at their top examples.
+Furthermore, we validate the claims made by NPEFF about the relationship between component coefficients and model parameters through perturbation experiments.
+In future work, we plan to investigate the use NMF variants as well as using other interpretability methods to better understand component tunings.
+
+
+
+
+
+
+\bibliography{refs}
+\bibliographystyle{icml2023}
+
+\newpage
+\appendix
+\onecolumn
+
+\section{Coefficient Fitting Implementation Details}\label{sec:coeff_fitting_details}
+Suppose we have the pseudo-Fisher matrix $H \in \R^{r\times m}$ and an example's PEF $\f\in\R^m$.
+We aim to find the example's component coefficients $\w\in\R^r$ by solving the convex optimization problem of minimizing $\|\f-H^t\w\|_2$ subject to $\w\geq0$.
+
+This is equivalent to the full NMF problem with one of the factors being fixed.
+The MU NMF algorithm works by alternating between optimizing one factor while holding the other fixed \citep{boureima2022distributed}.
+It thus consists of what is known as the $H$-update step followed by the $W$-update step.
+By repeatedly applying the $W$-update step, we can thus fit the coefficients of an example to a fixed set of pseudo-Fishers.
+
+In practice, both the PEF $\f$ and pseudo-Fisher matrix $H$ will be extremely sparse provided in a sparse format.
+In thus case, we can structure the repeated application of the $W$-update as two sparse matrix multiplies followed by repeated operations on a relatively small dense matrix.
+
+To see how, we write the $W$-update step as
+\begin{equation}\label{eq:appendix_w_update}
+    \w \mapsto \w \odot \frac{H\f}{HH^t\w},
+\end{equation}
+where the $\odot$ and fraction denote element-wise operations.
+Note that $H\f \in \R^r$ and $HH^t\in\R^{r\times r}$ do not change with repeated iterations.
+Furthermore, the rank $r$ of the decomposition is assumed to be small, so they can be computed once and stored for the entire optimization procedure.
+Each update step now becomes the product of an $r\times r$-matrix with an $r$-dimensional vector followed by a few element-wise operations on an $r$-dimensional vector.
+This can be accomplished extremely quickly on modern GPUs.
+
+We note that it is trivial to find coefficients for multiple examples in parallel.
+% Each example's coefficients can be found independently of the other examples.
+Furthermore, this can efficiently be parallelized on GPUs by batching, essentially converting some matrix-vector products to matrix-matrix products.
+
+
+% \section{TODO: The worked out example of the KL-divergence stuff}
+
+% Consider two Bernoulli distributions with parameters $p,q \in [0,1]$, respectively.
+% Consider $p$ to be akin to the original probabilities and $q$ to be a perturbed version.
+% The KL-divergence of the distributions is given by
+% \begin{equation}\label{eq:bern_kl}
+%     D_\mathrm{KL}(p\|q) = p \log \frac pq + (1-p)\log\frac{1-p}{1-q}
+% \end{equation}
+
+
+\section{Perturbation Hyperparameter Search Heuristic}\label{sec:hyperparameter_heuristic}
+Recall that our goal is to find values $\delta > 0$ and $\lambda \in [0, 1]$ such that the average KL-divergence of the perturbed model's predictions belongs to some range $[\ell_1, \ell_2]$.
+Our heuristic is based on the assumption that the average KL-divergence increases with increasing $\delta$ and $\lambda$.
+This corresponds to the perturbed parameters becoming increasing dissimilar to the originals.
+We also assume that the user has specified some maximum value for hyperparameter $\delta$, which we done $D$.
+Hence $\delta \in (0, D]$.
+
+We start by selecting initial values of $\delta$ and $\lambda$ at random from their respective ranges.
+We evaluate the average KL-divergence for the perturbed model with these hyperparameter values.
+We pick one of $\delta,\lambda$ to change, alternating between iterations of the heuristic.
+If the KL-divergence is too high, we pick a value halfway between the current value of the hyperparameter and its minimum value.
+We evaluate using the new hyperparameters.
+If the KL-divergence is too low, we try again using a value a quarter way to the original value of the hyperparameter and its minimum value.
+We repeat this until we get a KL-divergence value either within the specified range or higher than the range.
+If it is in the range, we stop.
+Otherwise, we keep that value of the hyperparameter and repeat with the other hyperparameter.
+We perform an analogous algorithm when the KL-divergence is too high.
+
+\section{Additional Component Tunings}\label{sec:additional_tunings}
+
+\subsection{NLP}
+Each of the sub-sections here corresponds to a single component.
+The top 16 examples per component are listed in descending order of component coefficient.
+
+\input{comp_top_exs/appendix_snli_top_ex.tex}
+
+\subsection{Vision}
+Each of the sub-sections here corresponds to a single component.
+The top 32 examples per component are listed with component coefficient decreasing in a row-major manner from left-to-right and top-to-bottom.
+
+\imagenetappendix{29}
+
+\imagenetappendix{35}
+
+\imagenetappendix{36}
+
+\imagenetappendix{53}
+
+\imagenetappendix{81}
+
+\imagenetappendix{171}
+
+\imagenetappendix{218}
+
+\imagenetappendix{271}
+
+\imagenetappendix{276}
+
+\section{Histograms}\label{sec:histograms}
+% See the snli_ex file for where the \appendixhistogram command is defined.
+
+% \subsection{NLP Model}
+
+
+% \subsubsection{Pseudo-Fisher Perturbations}
+
+\appendixhistogram
+{images/histograms/nlp_H_top_top.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average KL-divergence of the component top 128 examples to the dataset-wide average for the NLP model.
+The component top 128 examples were used to generate the sign pattern.
+The component pseudo-Fisher was used in the perturbation.
+Corresponds to the top row of the NLP section in \cref{table:h_kl_ratios}.}
+
+\appendixhistogram
+{images/histograms/nlp_H_rand_rand.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average KL-divergence of 128 random examples to the dataset-wide average for the NLP model.
+The 128 random examples were used to generate the sign pattern.
+The component pseudo-Fisher was used in the perturbation.
+Corresponds to the middle row of the NLP section in \cref{table:h_kl_ratios}.}
+
+\appendixhistogram
+{images/histograms/nlp_H_rand_top.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average KL-divergence of the component top 128 examples to the dataset-wide average for the NLP model.
+A random set of 128 examples were used to generate the sign pattern.
+The component pseudo-Fisher was used in the perturbation.
+Corresponds to the bottom row of the NLP section in \cref{table:h_kl_ratios}.}
+
+
+% \subsubsection{Example DSF Perturbations}
+
+\appendixhistogram
+{images/histograms/nlp_ex_top.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average KL-divergence of the component top 128 examples to the dataset-wide average for the NLP model.
+The component top 128 examples were used to generate the sign pattern.
+The DSF of these examples was used in the perturbation.
+Corresponds to the top row of \cref{table:ex_dsf_ratios}.}
+
+\appendixhistogram
+{images/histograms/nlp_ex_rand.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average KL-divergence of 128 random examples to the dataset-wide average for the NLP model.
+The 128 random examples were used to generate the sign pattern.
+The DSF of these examples was used in the perturbation.
+Corresponds to the bottom row of \cref{table:ex_dsf_ratios}.}
+
+
+% \subsubsection{PEF Norms}
+
+\appendixhistogram
+{images/histograms/nlp_norm.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average PEF norm of the compoent top 128 examples to the dataset-wide average for the NLP model.
+Corresponds to the top row of \cref{table:pef_ratios}.}
+
+
+
+% \subsection{Vision Model}
+
+
+% \subsubsection{Pseudo-Fisher Perturbations}
+
+\appendixhistogram
+{images/histograms/vision_H_top_top.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average KL-divergence of the component top 128 examples to the dataset-wide average for the vision model.
+The component top 128 examples were used to generate the sign pattern.
+The component pseudo-Fisher was used in the perturbation.
+Corresponds to the top row of the vision section in \cref{table:h_kl_ratios}.}
+
+\appendixhistogram
+{images/histograms/vision_H_rand_rand.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average KL-divergence of 128 random examples to the dataset-wide average for the vision model.
+The 128 random examples were used to generate the sign pattern.
+The component pseudo-Fisher was used in the perturbation.
+Corresponds to the middle row of the vision section in \cref{table:h_kl_ratios}.}
+
+\appendixhistogram
+{images/histograms/vision_H_rand_top.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average KL-divergence of the component top 128 examples to the dataset-wide average for the vision model.
+A random set of 128 examples were used to generate the sign pattern.
+The component pseudo-Fisher was used in the perturbation.
+Corresponds to the bottom row of the vision section in \cref{table:h_kl_ratios}.}
+
+
+
+% \subsubsection{PEF Norms}
+
+\appendixhistogram
+{images/histograms/vision_norm.pdf}
+{Histogram of per-component values of the $\log_2$ of the ratio of the average PEF norm of the compoent top 128 examples to the dataset-wide average for the vision model.
+Corresponds to the bottom row of \cref{table:pef_ratios}.}
+
+
+
+\end{document}

@@ -1,0 +1,8 @@
+\section{Conclusion}
+The methods proposed in this work demonstrate the effectiveness of simultaneous training on auxiliary and target datasets, as well as the importance of continuously updating beliefs by exploring \textit{and} exploiting auxiliary data.
+% Promote the need to do further work in utilizing auxiliary data by 1) reducing computational complexity, 2) designing rewards better suited to this scenario, 3) designing algorithms more specialized to supervised learning
+
+\alon{Circle back to desiderata in introduction and show that we've accomplished what we set out to do.}
+\subsection{Desiderata}
+% Recall our desiderata and make sure to remind readers how we will do these things
+Briefly recalling our desiderata for a FLAD algorithm, we wish for our learner to: make no assumptions on the auxiliary data a-priori to training, update it's beliefs on the importance of each auxiliary dataset online, and run efficiently in both memory and computational resources. By framing FLAD in the MAB setting we maintain an importance on exploration of the auxiliary data, requiring no information a-priori on the distributions, and including the ability to update beliefs continuously. For the last point, we made design choices (calculate gradient similarities using only a small portion of model parameters) that allow for very reasonable space and time complexity.

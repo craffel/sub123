@@ -1,0 +1,756 @@
+%%%%%%%% ICML 2022 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass[nohyperref]{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+\usepackage[table,xcdraw]{xcolor}
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2022} with \usepackage[nohyperref]{icml2022} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2022}
+
+% If accepted, instead use the following line for the camera-ready submission:
+% \usepackage[accepted]{icml2022}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}%
+\DeclarePairedDelimiter\norm{\lVert}{\rVert}%
+
+% Swap the definition of \abs* and \norm*, so that \abs
+% and \norm resizes the size of the brackets, and the 
+% starred version does not.
+\makeatletter
+\let\oldabs\abs
+\def\abs{\@ifstar{\oldabs}{\oldabs*}}
+%
+\let\oldnorm\norm
+\def\norm{\@ifstar{\oldnorm}{\oldnorm*}}
+\makeatother
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+
+\usepackage{graphicx}
+% \usepackage{subcaption}
+\newcommand{\cready}[1]{{}}
+\graphicspath{{graphs/}}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{bbm}
+\usepackage{placeins}
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Knowledge is a Region in Weight Space}
+
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Knowledge is a Region in Weight Space for Fine-tuned Language Models}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2022
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Firstname1 Lastname1}{equal,yyy}
+\icmlauthor{Firstname2 Lastname2}{equal,yyy,comp}
+\icmlauthor{Firstname3 Lastname3}{comp}
+\icmlauthor{Firstname4 Lastname4}{sch}
+\icmlauthor{Firstname5 Lastname5}{yyy}
+\icmlauthor{Firstname6 Lastname6}{sch,yyy,comp}
+\icmlauthor{Firstname7 Lastname7}{comp}
+%\icmlauthor{}{sch}
+\icmlauthor{Firstname8 Lastname8}{sch}
+\icmlauthor{Firstname8 Lastname8}{yyy,comp}
+%\icmlauthor{}{sch}
+%\icmlauthor{}{sch}
+\end{icmlauthorlist}
+
+\icmlaffiliation{yyy}{Department of XXX, University of YYY, Location, Country}
+\icmlaffiliation{comp}{Company Name, Location, Country}
+\icmlaffiliation{sch}{School of ZZZ, Institute of WWW, Location, Country}
+
+\icmlcorrespondingauthor{Almog Gueta}{almoggu@gmail.com}
+\icmlcorrespondingauthor{Leshem Choshen}{leshem.choshen@mail.huji.ac.il}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML, loss, loss landscape, weight space, parameter space, loss space, loss landscape, fine-tuning, text, NLP, Natural Language Processing, fusing, model averaging, mode connectivity, basin}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+% \printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+% \title{Knowledge is a Region in Loss Space}
+
+% Author information can be set in various styles:
+% For several authors from the same institution:
+% \author{Author 1 \and ... \and Author n \\
+%         Address line \\ ... \\ Address line}
+% if the names do not fit well on one line use
+%         Author 1 \\ {\bf Author 2} \\ ... \\ {\bf Author n} \\
+% For authors from different institutions:
+% \author{Author 1 \\ Address line \\  ... \\ Address line
+%         \And  ... \And
+%         Author n \\ Address line \\ ... \\ Address line}
+% To start a seperate ``row'' of authors use \AND, as in
+% \author{Author 1 \\ Address line \\  ... \\ Address line
+%         \AND
+%         Author 2 \\ Address line \\ ... \\ Address line \And
+%         Author 3 \\ Address line \\ ... \\ Address line}
+
+% \author{First Author \\
+%   Affiliation / Address line 1 \\
+%   Affiliation / Address line 2 \\
+%   Affiliation / Address line 3 \\
+%   \texttt{email@domain} \\\And
+%   Second Author \\
+%   Affiliation / Address line 1 \\
+%   Affiliation / Address line 2 \\
+%   Affiliation / Address line 3 \\
+%   \texttt{email@domain} \\}
+
+% \begin{document}
+% \maketitle
+\begin{abstract}
+Research on neural networks has largely focused on understanding a single model trained on a single dataset. However, relatively little is known about the relationships between different models, especially those trained or tested on different datasets. We address this and study how the weight space and underlying loss landscape of different models are interconnected.
+
+In this paper, we find that fine-tuned models, optimized for high performance, reside in certain regions in weight space, and vice versa: Models that reside in those regions have high performance. Specifically, we show that language models that have been fine-tuned on the same dataset form a tight cluster in the weight space, where models fine-tuned on different datasets from the same underlying task form a looser cluster. Moreover, traversing in the region between the models reaches new models that perform comparably or even better, even on tasks that the original models were not fine-tuned on.
+
+Our findings provide insight into the relationships between models, demonstrating that a model positioned between two similar models can acquire the knowledge of both models. We leverage this finding to pick a better model for efficient fine-tuning. We show that starting from the center of the region is as good or better than the pre-trained model in 11 of 12 datasets and improves by 3.06\% on average.
+
+\end{abstract}
+
+
+\begin{figure}[t]
+\centering
+    \includegraphics[width=\columnwidth]{graphs/bottom_lines/schema.pdf}
+    
+\caption{A schematic view of the discussed weight space. Fine-tuning ends up in a region determined by the dataset (deep blue) or the training task (light blue). Those reside in the region where fine-tuning language tasks end (outer blue region). Any combination of the fine-tuned weights is found in the region. Each region is characterized by a low loss on the corresponding data: dataset, task datasets, or diverse linguistic datasets. In general, the loss is lower in the region than in its boundaries or outside it.\label{fig:scheme}}
+\end{figure}
+
+\section{Introduction}
+A set of models that share the same architecture but differ in their weights can have dramatically different capabilities.
+As an example, the many fine-tuned variants of a pre-trained model can all share an architecture but nevertheless be specialized to different tasks.
+In this work, we aim to study the relationship between the weights of different fine-tuned models and the capabilities they exhibit. We analyse the \emph{weight space}, where each model is represented by a weight vector $\theta \in \mathbb{R}^n$. For simplicity, we refer to both the point in space and the neural network function as a model.
+
+%Specifically, an architecture defines a set of functions (i.e., neural networks) that are parameterized by $n$ weights. Hence, given some particular architecture, a model is represented by a weight vector $\theta \in \mathbb{R}^n$.
+%Taken together, those vectors define the \emph{weight space} of a model.
+%A model is a highly non-linear function of its weights.
+
+In this work, we find that linear transformations and distance in weight space characterize what knowledge models hold and how similar one model is to another.
+First, we show that after a pre-trained model is fine-tuned on similar datasets, the resulting fine-tuned models are close to each other in the weight space (\S\ref{sec:Clustering}). Throughout the paper, we test our claims in three granularities (\S\ref{sec:granularity_levels}), showing models fine-tuned on the same data are closer to each other than their counterparts and so are models fine-tuned on the same task. Similarly, fine-tuned models are not spread around the pre-trained arbitrarily and are also close to each other.
+
+Since these fine-tuned models are trained by minimizing a loss on a dataset, it is natural to consider their losses as well. Each model, a point in the weight space, could be evaluated and mapped to its performance, or loss, on one or many test datasets.
+% For example, Gradient Descent aims to find the weights $\theta$ that minimize the loss. 
+
+The finding that models fine-tuned on similar datasets are close together in weight space indicates that different fine-tuning runs tend to converge on similar minima rather than dispersed minima. Intuitively, those minima embed the knowledge necessary to perform the task. %Similarly, the models in the task region, embed the coarser-grained knowledge necessary to perform a task.
+This leads to the hypothesis that other points in the proximity of fine-tuned can also perform well on a given task. Notably, such points in weight space might not necessarily be reached via fine-tuning, but rather via spatial transformations. Indeed, we find that the points on a line between the weights for two models fine-tuned on the same dataset attain similar or even lower loss than the individual models (\S\ref{sec:interpolations}). We expand this finding to the convex hull between the fine-tuned models (\S\ref{sec:loss_metric}), suggesting shared knowledge across the region in space. The minima are not only close, they are a part of a connected basin of low loss. To show this, we test models sampled from the convex hull of the fine-tuned models and find they indeed perform relatively well. We replicate this finding in the aforementioned granularities, observing low loss regions per dataset, task, and language in general, tested on a diverse set of tasks. Furthermore, we show in \S\ref{sec:boundaries} that these regions are quite tight, in the sense that extrapolating (rather than interpolating) can quickly produce a poorly performing model.%  the fine-tuned models often lie at the edges of the region, and beyond them, models do not have good performance anymore. 
+
+More broadly, we hypothesize that knowledge divides the weight space into regions. For example, the region corresponding to models trained on the MNLI dataset \citep{williams2018broad} is nested inside the region corresponding to models trained on natural language inference tasks, which in turn is within the region of models that are trained on any language task (which is itself only a tiny region compared to the full set of possible parameter values for the model). This empirical finding has intriguing implications, suggesting, for example, that the best models may not lie at the edges of the region, but rather closer to its center, and that fine-tuning often yields models at the edge of the region. 
+
+Our findings in \S\ref{sec:practical} provide strong evidence to support this, demonstrating that a model created by averaging the weights of fine-tuned models from the same region outperforms the pre-trained model on a variety of tasks after subsequenet fine-tuning, even on tasks that the original fine-tuned models were not trained on.
+
+Overall, this work extends the growing body of knowledge about the loss landscape, which mainly discusses models trained on the same data. We also provide initial context to empirical findings about combining models. We discuss the relation of this work to previous ones in \S\ref{sec:related}.
+
+
+\section{Experimental Setup}
+We conduct two main types of experiments. In one we train models with different characteristics (e.g. dataset or task, see \S\ref{sec:granularity_levels}) and examine their representation in weight space using clustering. In the second type of experiment, we compare losses of one group of models to another.
+
+Below, we describe the datasets (\S\ref{sec:datasets}), settings (\S\ref{sec:settings}), and granularity levels of comparison between models (\S\ref{sec:granularity_levels}).
+
+
+\subsection{Datasets}\label{sec:datasets}
+In our experiments, we fine-tune and evaluate models on 36 datasets. Those datasets can be separated to several datasets families: natural language inference (\emph{NLI}), \emph{Sentiment} analysis and \emph{Topic} classification tasks and \emph{Twitter} domain families as well as the collection of \emph{general} datasets that cover a wide range of capabilities. We chose classification datasets for reliable evaluation. The details of each dataset family are found in App.~\ref{ap:sec:datasets}. We mostly rely on MNLI \citep{williams2018broad} dataset, NLI family and the general group as case studies, and elaborate on them below:
+
+\paragraph{General.} This dataset family contains 12 GLUE \citep{wang-etal-2018-glue} and SuperGLUE text classification datasets \citep{Wang2019SuperGLUEAS}, excluding test-only (AX-b \citep{Wang2019SuperGLUEAS}, AX-g \citep{Poliak2018CollectingDN}) and regression (STS-B \citep{Cer2017SemEval2017T1}) datasets. We further exclude WSC \citep{levesque2012winograd} and CoPA \citep{roemmele2011choice} which are small and unstable (e.g., fine-tuning results were sometimes lower than pre-trained model results). The datasets consist of a wide range of classification tasks, from sentiment analysis to linguistic acceptability to NLI.
+
+\paragraph{NLI.} This dataset family is composed of a set of six Natural language inference datasets. MNLI \citep{williams-etal-2018-broad}, QNLI \citealt{rajpurkar-etal-2016-squad}, RTE \citep{Dagan2005ThePR,BarHaim2006TheSP,Giampiccolo2007TheTP,Bentivogli2009TheSP}, WNLI \citep{Levesque2011TheWS}, ESNLI \citep{Camburu2018eSNLINL}, adversarial NLI \citep{nie-etal-2020-adversarial}.
+%
+
+\subsection{Training Approaches}\label{sec:settings} 
+
+We experiment with RoBERTa-base \citep{Liu2019RoBERTaAR} as our base pre-trained model, except in App.~\ref{ap:sec:roberta_vs_yanai}, where we compare models starting from different pre-trained models.
+For fine-tuned models, %we start from the pre-trained model and fine-tune it on one of the datasets mentioned above. During fine-tuning, 
+we follow the standard hyper-parameters proposed by \citet{Liu2019RoBERTaAR}, with a larger batch size of 256 and a learning rate of 5e-5. Experiments analyze fine-tuned models using 5 different seeds, except for the same-dataset clustering experiments where 20 seeds are used (\S\ref{sec:behavior_per_seed}). Those seeds control randomly initialized weights in the classification head and data shuffling.
+
+
+\subsection{Clustering}\label{sec:Clustering} 
+In the clustering experiments, we aim to qualitatively explore whether models trained on similar data end up close together in weight space.
+We experimented with various distance metrics and clustering algorithms.
+While many metrics worked well, we found that subtracting the pre-trained weight values from the fine-tuned values (referred to as ``task vectors'' by \citet{ilharco2022editing}) and measuring distance via cosine similarity was conceptually simple, cheap to compute, and provided qualitatively reasonable results compared to more sophisticated methods \citep{kornblith2019similarity,toledo2022revisiting}.
+We also tested Euclidean distance but it did not produce clear clusters. This likely is caused by the growth of the norm of the flattened weight vector during training \citep{merrill2020parameter} that is unrelated to the data at hand (\S\ref{ap:sec:data_amounts}).
+As a clustering algorithm, we use Spectral Clustering with as many clusters as datasets or dataset families.
+For visualization, we project the 120M dimensional weight vectors into 2 dimensions with t-SNE \citep{van2008visualizing}. 
+
+\section{Methodology: Comparing Models}
+Our goal in this work is to compare models that share an architecture (and therefore have a comparable weight space) but were trained on different data.
+Ideally, we would also be able to directly compare the loss achieved by these models.
+Unfortunately, the loss of a given model is often incomparable across datasets or tasks. 
+
+To define a loss that is comparable across models, we follow the common approach: perceiving the model $f_\theta$ as a representation encoder $f_\omega$ with a task-specific classifier over it $f_\phi$, i.e. $f_\theta = f_\phi \circ f_\omega \coloneqq f_{\phi,\omega} $ \citep{choshen2022start,Rame2022RecyclingDM}. 
+To compare the losses of several models, each encoder is kept fixed, and each is fitted with a classification head for the target data, and then we calculate losses. %Intuitively, given a model, we define its loss as the best loss any linear classifier over it can achieve. 
+Specifically, to calculate the loss of a model we perform the following: First, we remove any existing masked language modeling layers or classification heads, and replace them with a new randomly initialized classification head. This leaves the rest of the weights $f_\omega$ fixed, i.e., the entire encoder. We then perform \emph{linear probing}, i.e., we train only the new classification head on a desired target data $x_{train}$ and its labels $ y_{train}$. Last, we pass the test data $x_{test}$ through the model (including the classifier $f_{\phi}$ on top of it) and report the loss with respect to the labels $y_{test}$. 
+Formally, for the model $f_{\phi,\omega}$ and loss function $l$, we report the generalized loss $l_g(\omega)=l(f_{\phi,\omega}(x_{test}),y_{test})$ 
+where $f_{\phi}=\argmin_{\phi} l(f_{\phi,\omega}(x_{train}),y_{train})$.
+
+This approach has a desirable trait, when considering the task on which the model was originally fine-tuned, our loss $l_g$ is equal to the original fine-tuning loss $l$.
+Furthermore, since fitting a linear classifier given a fixed representation is a convex optimization problem, we observe similar results across runs. 
+
+Because the generalized loss enables comparison across models, we are only left with choosing data to compute the loss over. %A task of interest would be a natural choice, but a more general loss is also valuable, 
+As we compare models fine-tuned on different datasets, testing on one of the datasets is undesirable. We thus consider a loss on a dataset, but also the average loss on a family of datasets. For example, this could be the average across all entailment datasets or on all language tasks rather than the loss on a particular dataset.
+
+
+\subsection{Levels of Granularity}\label{sec:granularity_levels} 
+To study the relationship between the weights of similarly trained models, we experiment with three levels of granularity for dataset similarity. At each level, we analyze models fine-tuned on source datasets sharing some traits. In each level's setting, we define an \emph{interior} group (hereafter \emph{In}) of datasets that share a trait as well as an \emph{exterior} group (hereafter \emph{Ex}) of models not sharing the trait. By default, we report on each group the average loss over all source datasets used for fine-tuning In models.
+
+\paragraph{Same-Dataset.} \label{sec:behavior_per_seed}
+In the most specific case, models are similar if they were fine-tuned on the same dataset. Interior models are fine-tuned on MNLI \citep{williams-etal-2018-broad} and exterior on the rest of the General datasets. We report loss over MNLI. 
+
+\paragraph{Same-Task.} At the next level of granularity, we consider the group of models trained on the same task. In that case In contains models fine-tuned on NLI datasets and Ex contains models fine-tuned on all other datasets. We report loss over all NLI datasets, except for ANLI which might add confounding effects, as it is made with examples that were adversarially constructed to cause misclassifications for NLI-trained models. \label{sec:behavior_per_task}
+
+\paragraph{General.} In the most general case, we consider any model fine-tuned on any of the General datasets as In. This leaves little to consider as exterior, so we construct Ex by perturbing the pre-trained model's weights in a random direction. We apply a perturbation whose norm is equal to the average distance between the pre-trained and In models. There is no clear prior to sampling a random direction in space, we hence aim for a prior that prefers points in the weight space that represent "reasonable" networks. We use Xavier initialization \citep{xavierInit} to define such a prior. The prior is an i.i.d. Gaussian distribution over each weight with zero mean and where variance depends on the layer characteristics. This choice reduces the probability of sampling networks with exploding or vanishing outputs, which would stand as a weak baseline.
+ \label{sec:behavior_per_fine-tuning}
+
+
+\begin{figure*}[t]
+\centering
+    \subfigure[Clustering models by dataset.]{
+        \includegraphics[width=0.48\textwidth]{graphs/weight_space/clusters_ds.pdf}
+    \label{fig:cos_sim_same_task}
+    }
+\hfill
+\subfigure[Clustering models by dataset family.]{
+    \includegraphics[width=0.48\textwidth]{graphs/weight_space/clusters_task_no_twitter.pdf}
+    \label{fig:cos_sim_different_tasks}
+    % \vspace{-0.3cm}
+}
+\caption{Clusters of fine-tuned models on different datasets or tasks, projected by t-SNE. We find that both datasets and dataset families correspond to regions in space. In each figure, each model is represented as a dot, where the inner color is the color of the dataset/task the model was fine-tuned with and the outer color is the color of the most common dataset/task in the cluster (representing the cluster label). Datasets/tasks names are shown in legends. 
+\label{fig:clusters_mnli_nli}}
+\end{figure*}
+
+\section{Analysis in Weight Space}\label{sec:analysis}
+
+We start our analysis by showing that the models trained on similar data fall into the same region in weight space - i.e., they are clustered together.
+We leave the inverse claim to  \S\ref{sec:interpolations}, \S\ref{sec:loss_metric}, i.e., showing that models within the cluster obtain a lower loss than the models outside the cluster.
+
+Specifically, we find (see Fig.~\ref{fig:clusters_mnli_nli}) that fine-tuning on similar data yields models that are closer to each other in the weight space compared to models that have been trained on different datasets or tasks. Notably, despite the fact that neural networks implement highly non-linear functions, fine-tuning similarity is expressed in the euclidean space of their weights. Moreover, we show in App.~\S\ref{ap:sec:data_amounts} that the direction in space is determined by the type of training data and not by its amount. In App.~\ref{ap:sec:roberta_vs_yanai}, we show that this proximity only holds when starting from the same base model.
+
+\paragraph{Similarity Per Dataset.}\label{sec:similarity_per_dataset}
+In the simplest case, for each dataset in the General group, we fine-tune models with 20 random seeds. We cluster the resulting 280 models into 12 clusters.
+As we can see in Fig.~\ref{fig:cos_sim_same_task}, for the most part, models fine-tuned on the same dataset with different random seeds are clustered together. Accordingly, the overall clustering accuracy is 98, with all but 3 clusters perfectly matched. % details: https://ibm-research.slack.com/archives/D67D382MR/p1674394096787169
+
+\paragraph{Similarity Per Task.}
+In this experiment, we show that models fine-tuned on datasets from the same task are also close in weight space (we discuss proximity when datasets of the same domain in App.~\ref{ap:sec:sim_per_task_and_domain}). As explained in \S\ref{sec:datasets} we have three dataset families representing a task: NLI, Topic, and Sentiment. We fine-tuned five models for each dataset in each family, using different random seeds. Then, we cluster all models into three clusters. In this analysis we omit models fine-tuned on General datasets since they do not have a common task. Hence, we do not expect these models to be clustered together in weight space. 
+
+As seen in Fig.~\ref{fig:cos_sim_different_tasks}, models that were fine-tuned on the same task-family are closer to each other and are clustered together (clustering accuracy of 90\%). We report $F_1$ Score per group at App.~\ref{ap:sec:sim_per_task_and_domain}.
+
+
+%We observe that the Twitter family group has more mismatches in the clustering. This likely stems from datasets in this family belonging to the Twitter domain, but also to other tasks.% This suggests that both domain knowledge and task related knowledge define that our choice of separating the datasets to tasks but also to domains, might not be optimal as some datasets may share either a domain or a task.
+%One possible reason for it is that those datasets have similarities to both other datasets of the same domain and datasets of the same task. Correspondingly, the regions containing models that perform well on the domain and on the task might overlap and the models that fall in the  intersections are hard to classify. Future work might delve into the implications of this and whether region intersections offer more general models.
+
+
+
+\paragraph{Similarity in General.}
+Unlike datasets or tasks, we can not create multiple distinct general groups and hence can not expect multiple clusters to occur. Hence, we do not present clustering for this granularity level. However, we can still infer that this general region does not encompass the whole space around the pre-trained model, and has a superior loss in general (see \S\ref{sec:loss_metric}).
+
+
+\subsection{Cause: Data Type, not Size}\label{sec:data_amounts}
+A possible confound in the above results is that the amount of data determines the distance from the pre-trained which the fine-tuned model moves.
+To test this, we fine-tune models on sub-samples with different sample sizes (200, 400, 800, 1600, 3000).
+To make the comparison consistent we only take the nine datasets from General family that contain at least 3K training samples.
+We then cluster the fine-tuned models into $k$ clusters, with $k$ the number of datasets or the number of dataset sizes.
+%Figure~\ref{fig:equal_data_size}
+
+The resulting clusters (App.~\ref{ap:sec:data_amounts}) are clustered by data type, not by the amount of data, similar to Fig.~\ref{fig:clusters_mnli_nli}. Choosing $k$ to be the number of data-sizes does not cluster by data size either. 
+%Results show that models fine-tuned on the same dataset but with different number of samples are still clustered together, and that models of the same train set sizes are not clustered together. 
+We conclude that the observed similarity comes from the nature of the data, and not from the size of a given dataset. \looseness=-1
+
+
+\begin{figure*}[t]
+\subfigure[Interpolation per dataset.]{
+    \includegraphics[width=0.3\textwidth]{graphs/loss_space/interpolations/interpulation_MNLI.pdf}
+    \label{fig:interpolation_per_dataset}
+    % \vspace{-0.3cm}
+}
+\hfill
+\subfigure[Interpolation per task.]{
+    \includegraphics[width=0.3\textwidth]{graphs/loss_space/interpolations/interpulation_nli.pdf}
+    \label{fig:interpolation_per_task}
+    % \vspace{-0.3cm}
+}
+\hfill
+\subfigure[Interpolation in General.]{
+    \includegraphics[width=0.3\textwidth]{graphs/loss_space/interpolations/interpulation_general.pdf}
+    \label{fig:interpolation_per_fine-tuning}
+    % \vspace{-0.3cm}
+}
+\caption{Losses of linearly interpolated models created between pairs of similar models. The best loss is often found between models. In each figure, the solid line is the losses' average during interpolations for different $ \alpha $ values, the edges of the lines represent the average loss pure fine-tuned models we interpolate, Y axis is the average loss value, X axis is the position determined by $\alpha$. The shade is the standard deviation of the losses average. 
+\label{fig:interpolation_all_granular_levels}}
+\end{figure*}
+
+\section{Loss in the Region between Models}
+
+In \ref{sec:analysis}, we claim that models trained on similar data converge near each other in the weight space, but is the area to which they converge meaningfully? In this section, we show that models falling in the entire region around these clusters correspond to performant models.
+
+The models we analyzed so far were the outcome of a gradient-based optimization process striving to find a point that has minimum loss. The locality we observed in weight space indicates that the points found through this procedure are concentrated in relatively small regions.
+We hypothesize that a whole region of low losses (corresponding to performant models) exists between the separate points found during fine-tuning. For example, the "NLI region" contains MNLI, SNLI and QNLI models but also other points that reflect models that might not have been found through gradient-based optimization on a specific dataset but exhibit the general abilities needed to perform Natural Language Inference.
+
+In order to test this hypothesis, we interpolate pairs of similarly trained models and show in Section~\ref{sec:interpolations} that the points between the models act comparably or even better than the original fine-tuned models. This suggests that indeed there are regions in weight space where all points encode the knowledge or model behaviour required for a particular task. Further interpolations can be found in App.~\ref{ap:sec:interpolations}.
+We then expand this and claim in Section~\ref{sec:loss_metric} and show that the whole region of the weight space that lies between these models (their convex hull) corresponds to models that perform well.
+%The above experiments differ from previous experiments in that we evaluate models that were not the outcome of fine-tuning or any optimization process but rather correspond to a certain region in weight space. % duplicate of ... the outcome of a gradient-based optimization...
+
+\subsection{Interpolation on the Line Between Model Pairs} \label{sec:interpolations}
+In this experiment, we consider the points in weight space between pairs of fine-tuned models. Given a pair of models, we shift from one model to the other by linearly interpolating between their weights (excluding the classification head), i.e., we take the model's weights $\omega_{1},\omega_{2}\in\mathcal{R}^d$, and consider weighted sums of their weights: 
+\begin{equation}\label{equation:weighted_avg}
+\omega_{1} * \alpha + \omega_{2} * \ (1-\alpha) 
+\end{equation}
+where $ \alpha \in [0,1]$.
+We then evaluate each interpolated model both on the datasets the original models were fine-tuned on as well as additional datasets unseen by the models. 
+We interpolate pairs of different models fine-tuned on the same dataset, or on two different datasets.
+We report the average losses of repeating the experiment with models fine-tuned with different seeds.
+
+Results presented in Fig.~\ref{fig:interpolation_all_granular_levels} show that the interpolated models perform comparably or even better than the models they are created from. We present further results testing the groups on different losses on App.~\S\ref{ap:sec:interpolations} and find performance is often best somewhere in the interpolation between the two models. 
+We now elaborate on each granularity level separately: 
+
+
+\paragraph{Interpolation Per Dataset.} We interpolate 5 fine-tuned models on MNLI dataset (resulting in a total of 10 pairs) and evaluate on MNLI. We report an analogous experiment with SST2 in App.~\S\ref{ap:sec:interpolations}.
+Figure~\ref{fig:interpolation_per_dataset} shows that the interpolated models perform well on average and even outperform the original models they are created from. Similar results were found in other settings \citep[e.g.;][]{Wortsman2022ModelSA} and we discuss those works in \S\ref{sec:related}.
+
+
+\begin{figure*}[t]
+\centering
+
+\subfigure[Losses in the dataset region]{
+    \includegraphics[width=.3\textwidth]{graphs/loss_space/metrics/dist_mnli.pdf}
+\label{fig:metric_mnli_g'}
+    % \vspace{-0.3cm}
+    }\hfill
+\subfigure[Losses in the domain region]{
+    \includegraphics[width=.3\textwidth]{graphs/loss_space/metrics/dist_nli.pdf}
+\label{fig:metric_nli_g'}
+    }
+\hfill
+\subfigure[Losses in the general region]{
+    \includegraphics[width=.3\textwidth]{graphs/loss_space/metrics/dist_general.pdf}
+\label{fig:metric_general_g'}
+    % \vspace{-0.3cm}
+    }
+    
+\caption{Distributions of model losses. Presented are 3 groups: In of similarly fine-tuned models, In' with models between those and Ex of baseline models. In Fig.~\ref{fig:metric_nli_g'} models from the NLI region tested on NLI losses. In Fig.~\ref{fig:metric_mnli_g'}, the 5 models from MNLI region tested on MNLI loss.} 
+\label{fig:distributions}
+\end{figure*}
+
+\paragraph{Interpolation Per Task.} We interpolate five fine-tuned models on MNLI with five fine-tuned on ESNLI, both from the NLI task, resulting in 25 pairs and evaluate on all NLI datasets (excluding ANLI for consistency as explained in \S\ref{sec:behavior_per_task}). 
+We replicate the results of the previous experiment and find the interpolated models are performant on all targets on average, as can be seen in Fig.~\ref{fig:interpolation_per_task}.
+
+
+\paragraph{Interpolation In General.} We interpolate five fine-tuned models on MNLI with five fine-tuned on SST2, both from the General family, resulting in 25 pairs and evaluating on all General datasets as targets. Fig.~\ref{fig:interpolation_per_fine-tuning} shows improved performance in this extended group and better performance in the interpolated models than in the fine-tuned ones. 
+
+
+\begin{figure*}[t]
+\centering
+% \subfigure[Extrapolation Per Dataset]{
+%     \includegraphics[width=\textwidth]{edges_of_groups/extrapolations/extrapolations_glue_all_targets.png}
+%     \label{fig:extrapolation_per_dataset}}
+%     % \vspace{-0.3cm}
+% \hfill
+\subfigure[Extrapolation Per Task]{
+    \includegraphics[width=.3\textwidth]{graphs/edges_of_groups/extrapolations/extrapolation_mnli_mnli.png}
+    \label{fig:extrapolation_per_task}
+    % \vspace{-0.3cm}
+    }
+\hfill
+\subfigure[Extrapolation Per NLI]{
+    \includegraphics[width=.3\textwidth]{graphs/edges_of_groups/extrapolations/extrapolation_mnli_esnli.png}
+    \label{fig:extrapolaion_nli}
+    % \vspace{-0.3cm}
+    }
+\hfill
+\subfigure[Extrapolation Per Fine-Tuning]{
+    \includegraphics[width=.3\textwidth]{graphs/edges_of_groups/extrapolations/extrapolation_sst2_mnli.png}
+    \label{fig:extrapolaion_fine-tuning}
+    % \vspace{-0.3cm}
+    }
+\caption{Losses of linearly extrapolation models created between pairs of similar models. In each figure, the solid line is the average losses during extrapolations for different $ \alpha $ values, the vertical dashed lines indicate the average loss of the pure models we extrapolate ($\alpha=0$ or $\alpha=1$), Y axis is the average loss value, X axis is the position (meaning the $ \alpha$ and $(1-\alpha) $ values used in the extrapolation). The shade is the standard deviation of the losses average.} 
+\label{fig:extrapolation}
+\end{figure*}
+
+
+\subsection{Comparison between Region losses}\label{sec:loss_metric}
+
+Thus far, we showed that models on the line between model pairs perform well. We extend the analysis to show that models in the whole region between similar models perform well. However, performing a grid search or visualising a whole multidimensional region (the convex hull) is not feasible. Instead, we sample models in the region and show they outperform their external counterparts. 
+
+We define a metric to compare two groups of models: given the interior models group In and the exterior models group Ex, we calculate $PB$ as the probability that an interior model would perform better than an exterior one.
+\begin{equation*}\label{equation:PB}
+PB=\mathop{{}\mathbb{E}}_{i\in \text{In}, j\in \text{Ex}}\mathbbm{1}\{l_g(\omega_i)\le l_g(\omega_j)\}.    
+\end{equation*}
+As a loss function we choose the average loss over the source datasets used to create the In models.
+
+%We apply We broaden the definition to infinite sets to make it applicable to regions in weight space and not only the fine-tuned models. 
+We also compare models inside the region to In and Ex models, by calculating PB. Let \emph{In'} be the convex hull between all the models in In, making each model in In' a weighted average of models in In: $\sum_{i=0}^{\abs{\text{In}}}\alpha_i\cdot\omega_i$
+where $\sum_{i=0}^{\abs{\text{In}}}\alpha_i=1$ 
+and $\omega_i\in \text{In}$. Such weighted averages are sometimes used in practice (c.f. \S\ref{sec:related}, \citealp{choshen2022fusing,matena2021merging}).
+Practically, as In' is infinite, we estimate $PB$ by sampling $\abs{\text{In}}$ models uniformly from the region they convey.
+
+Testing models of In and In' groups, we find they indeed outperform Ex models on the tasks the In models were trained on. We find this is true in all granularity levels, models on the dataset region are better than other models, and even models from the domain region and models fine-tuned versus just models in the same distant from the pre-trained. Moreover, we again find, like in \S\ref{sec:interpolations} that the In' is even better than the In. In addition to the bottom line metric PB, we depict the loss distributions across those models in Fig.~\ref{fig:distributions}.
+
+
+\paragraph{Loss Per Dataset.} We take models fine-tuned on a dataset and test how the models between them perform on it. We consider In, the group of fine-tuned models on MNLI and Ex, the fine-tuned models on General datasets. Both groups are evaluated on MNLI dataset. 
+We find PB is 100\%, for both In and In', meaning that, as may be expected, all MNLI models get higher results on MNLI than all the rest of the models. More surprising is that so are In', all the models between MNLI models, are better than Ex. In fact, in 88\% of the times In' models are also better than In, the models fine-tuned on MNLI. 
+%Figure~\ref{fig:metric_mnli_g'} shows the distribution of loss for MNLI In, In' and Ex groups above. 
+
+
+\paragraph{Loss Per Task.} We compare models from a task region with models from other regions. Here, In is the group of fine-tuned models on {NLI} task and Ex on the rest of the datasets described in \S\ref{sec:datasets}. Both groups are evaluated on all {NLI} datasets excluding ANLI for consistency as explained in \S\ref{sec:behavior_per_task}. 
+We find the models randomly sampled from this region are better than other fine-tuned models. NLI In group models are better in $PB=75.3\%$ of the cases, and the In' models in 100\%, comparing In and In' shows In' is also better with $PB=96.7\%$. 
+%Figure~\ref{fig:metric_nli_g'} shows the distribution of loss for In, In' and Ex groups above. 
+
+
+\paragraph{Loss In General.} In is fine-tuned models on {general} datasets, Ex is random models as defined in \S\ref{sec:behavior_per_fine-tuning}. Both groups are evaluated on the {general} datasets. 
+We find again that In is better than Ex ($PB=89.8\%$) but worse than In'($PB=90\%$) which is also better than Ex ($PB=100\%$). To conclude, we consistently see that the region between fine-tuned models does not only provide models which are better than the baseline, but ones that are better than the fine-tuned models defining this region.
+
+
+
+\section{Region Edges}\label{sec:boundaries}
+Thus far we have shown that there are spacial regions that specify learnt generalizations. We now look for the boundaries of those regions, going the opposite way than we did before in the interpolation. 
+We also test the edges going from the center of the region to other directions in App.~\ref{ap:sec:not_inter_edge}.
+
+\subsection{Extrapolation on the Line Between Model Pairs}
+In Section~\ref{sec:interpolations}, we took pairs of models and found the linear path between them passes through a region of low loss. We now continue on this path and check how far in the opposite directions does the loss rise. We reproduce the interpolations settings of \S\ref{sec:interpolations}, but apply linear-extrapolation, i.e., test $ \alpha $ values out of range [0,1]. We make 10 steps in logarithmic advances from 1 to 32 and similarly from 0 to -31.% each doubling the distance on the line ($\alpha=1,2,4\ldots$), and similarly to the other direction. 
+
+
+Figure~\ref{fig:extrapolation} depicts the results for the three granularity levels. We provide more detailed results in App.~\ref{ap:sec:extrapolations}. We find that extrapolation rapidly reaches a bad performance. This implies the converged models are near the edge of the loss basin (in this dimension). We further observe that the basin has a relatively flat base and steep cliffs. This implies the regions we find are small basins and not a subspace for example. In a sense, we discover a bounded region that characterizes the loss basin (of e.g., NLI tasks), where the models within have low loss and the models beyond have a high loss.  
+
+
+\section{Practical Takes}\label{sec:practical} 
+This research has several practical implications. First, we have seen in \S\ref{sec:loss_metric} the superiority of models inside the region (In') over the fine-tuned models defining the region (In). Practically, one can average several models from the same region and cautiously expect the resulting model to perform better. This model can be used without further fine-tuning, in the Same-Dataset region, as was indeed used in practice \citep[c.f. \S\ref{sec:related};][]{Wortsman2022ModelSA,wortsman2022fi}. 
+
+We provide another implication of our findings. If indeed models in In' share partial information with models from In, this aggregated information may be general and useful for other tasks. In practice, there are two common uses for a model, either to infer with it or to fine-tune it.
+We focus on the former as it is an immediate implication of a low loss.
+
+We hypothesize that fine-tuning a model from a region is mostly better than fine-tuning the pre-trained. Having no preference over points in the region, we pick the centroid of the region, i.e., the average between models in In. This point may include more knowledge from each model and be stronger than arbitrary points in the region (see App.~\S\ref{ap:sec:interpolations}), but as seen in our experiments, it may also be suboptimal (see \S\ref{sec:interpolations} and App.~\S\ref{ap:sec:interpolations}).
+
+For training, we employ efficient fine-tuning. Specifically, BitFit \citep{ben-zaken-etal-2022-bitfit}, which is both performant and preserves most of the weights in the initialization untouched. Changing only a small subset of the weights reduces the complex effects due to the training dynamics and eases attributing improvements to the initialization weights. We avoid giving unfair benefit to our method and for each test dataset choose the centroid of all models excluding ones fine-tuned on the same test dataset. 
+
+We find (Fig.~\ref{fig:bitfit} and App.~\ref{ap:sec:bitfit}) that starting from the centroid, instead of starting from a pre-trained model, results in a better performing model. The centroid is better on average by 4.03\% and is also better most of the times, outperforming the pre-trained in 9 cases, reaching the same results in 2 and underperforming in 1 case. As efficient fine-tuning is often used when data is scarce, we replicate the results for such a scenario in App.~\ref{ap:sec:bitfit}. 
+
+Efficient fine-tuning is especially interesting in the scenario of scarce data (App.~\ref{ap:sec:bitfit}). We hence replicate the results in a few-shot scenario limiting the training examples to 1K. The general trend is replicated, only that improvements reach as high as 34\% improvement and above 10.66\% on average.
+
+
+\begin{figure}[t]
+\centering
+    \includegraphics[width=\columnwidth]{graphs/practical/acc_diff.pdf}
+\caption{Losses of pre-trained and centroid models on several target datasets, where both models were efficiently fine-tuned using BitFit.\label{fig:bitfit}}
+\end{figure}
+
+\section{Explaining previous work}\label{sec:related}
+A long line of work considered the connectivity between models, namely a path in the weight space between two networks that has a low loss throughout it. First, it was shown that models trained on the same dataset, always have such a path, but it is not linear \citep{garipov2018loss, pmlr-v119-frankle20a}. This non-linearity was often explained by networks that represent the same function but with changes to the weights such as permutations \citep{ainsworth2022git,jordan2022repair, 6796044,HECHTNIELSEN1990129}, under these conditions or similar initialization, the path did seem to be linear \citep{mcmahan2017communication,entezari2021role}. \citet{benton2021loss} even considered simplexes of low loss, rather than linear paths. In addition, \citet{mirzadeh2020linear}, the only work we know to compare models trained on different datasets showed that multitask learning, converges to a point with low loss for both tasks. We generalize those notions, when considering fine-tuned  models. We show that indeed there is a linear path between two models, as there is a whole region with low loss, and this line moves through it. We also generalize it to models that were not trained on the same data and test them on different data. We presume the overlap between regions is the one multitask finds, and that improved performance due to multitasking of sorts \citep{aghajanyan-etal-2021-muppet} makes sense, as the model optimizes the "language loss" falling in subregions that overlaps multiple regions of knowledge.
+
+Our results also support and provide an initial explanation of recent practical findings. Some works show that starting from a fine-tuned  model helps further fine-tuning \citep{choshen2022start, Phang2018SentenceEO}, which may be related to all the fine-tuned  models sharing a region or the two tasks at hand. Moreover, a growing literature shown improvements by averaging two or more fine-tuned models. Some of those average models trained on the same dataset \citep{Wortsman2022ModelSA,wortsman2022fi}, which we show picks one model from inside the dataset region. Others show that averages between models can improve models from tasks that they were not trained on \citep{choshen2022fusing,matena2021merging}, which agrees with our more general findings. \citet{ilharco2022editing} further suggests some attributes can be added to the model by moving in certain directions in the weight space. On a parallel work, \citet{Rame2022RecyclingDM} considers two fine-tuning stages before averaging.
+After those, came also iterative works. Each time models are trained in parallel and then averaged to aggregate their knowledge. That was done both for self-supervised pre-training \citep{li2022branch} and as a supervised pre-training, equivalent to a massive multitask learning scenario \citep{don2022cold}. Future work may deal with understanding how those processes move through the weight space and how is it in comparison to the regions found by fine-tuning once. %All those works on averaging rely on points that are strictly in the region to aggregate knowledge, even if not necessarily the optimal point in the region \citep{matena2021merging}.
+
+\section{Conclusion and Discussion}
+Putting all the results together conveys a consistent message. There are regions in weight space of good performance on a dataset, a task or in general. From \S\ref{sec:Clustering}, we understand good performance is centered in certain areas, basins, in weight space. We find in \S\ref{sec:interpolations} that these form one basin rather than multiple close minima falling to multiple basins and in \S\ref{sec:loss_metric} that this basin is multidimensional. Finally, the extrapolation studies in \S\ref{sec:boundaries} show those areas do not exceed far beyond the fine-tuned models. Overall, it seems often the models close to the boundaries are sub-optimal suggesting some search in the region between model.
+
+
+% Entries for the entire Anthology, followed by custom entries
+\FloatBarrier
+\clearpage
+\bibliography{anthology,custom}
+\bibliographystyle{icml2022}
+
+\FloatBarrier
+\clearpage
+\appendix
+\onecolumn
+\section{Dataset List}\label{ap:sec:datasets}
+
+Most datasets could be downloaded from \href{https://huggingface.co/datasets/}{huggingface datasets}. We explicitly state the download link when relevant.
+As we used groups of datasets we report here the full list of datasets they contain.
+
+
+General: CoLA \citep{warstadt-etal-2019-neural}, SST2 \citep{socher-etal-2013-recursive}, MRPC \citep{dolan-brockett-2005-automatically}, QQP (\href{https://data.quora.com/First-Quora-Dataset-Release-Question-Pairs}{\texttt{data.quora.com/\allowbreak First-\allowbreak Quora-\allowbreak Dataset-\allowbreak Release-Question-Pairs}}), MNLI \citep{williams-etal-2018-broad}, QNLI \citealt{rajpurkar-etal-2016-squad}, RTE \citep{Dagan2005ThePR,BarHaim2006TheSP,Giampiccolo2007TheTP,Bentivogli2009TheSP}, WNLI \citep{Levesque2011TheWS}
+BoolQ \citep{clark-etal-2019-boolq}, CB \citep{demarneffe:cb}, CoPA \citep{roemmele2011choice}, MULTIRC \citep{khashabi2018looking}, WIC \citep{pilehvar2018wic}%, WSC \citep{levesque2012winograd}
+
+NLI datasets: MNLI \citep{williams-etal-2018-broad}, QNLI \citealt{rajpurkar-etal-2016-squad}, RTE \citep{Dagan2005ThePR,BarHaim2006TheSP,Giampiccolo2007TheTP,Bentivogli2009TheSP}, WNLI \citep{Levesque2011TheWS}, ESNLI \citep{Camburu2018eSNLINL}, adversarial NLI \citep{nie-etal-2020-adversarial}.
+
+Twitter domain datasets (collected by TweetEval \citep{barbieri-etal-2020-tweeteval}) EmoInt \citep{MohammadB17starsem}, Emoji \citep{semeval2018task2}, Irony \citep{van-hee-etal-2018-semeval}, OffenseEval \citep{zampierietal2019}, HatEval \citep{basile-etal-2019-semeval}, Sentiment Analysis \citep{rosenthal-etal-2017-semeval}%, Stance \citep{StanceSemEval2016}
+
+Sentiment Analysis: Poem Sentiment \citep{sheng-uthus-2020-investigating}, IMDB \citep{maas2011imdb}, Rotten Tomatoes \citep{pang-lee-2005-seeing}, SST 5bins \citep{socher-etal-2013-recursive}, SST2 \citep{socher-etal-2013-recursive}, Amazon reviews \citep{he2016ups} ,Financial Phrasebank \citep{malo2014good}
+
+Topic Classification: AG news \citep{zhang2015character}, ISEAR \citep{scherer1994evidence}, Yahoo answers \citep{zhang2015character}, DBpedia \citep{zhang2015character}, 20 newsgroup \citep{zhang2015character}, TREC in both fine-grained and coarse-grained labels \citep[][]{li-roth-2002-learning}
+
+
+
+\section{Similarity Per Dataset, when Starting from different Pre-trained Models}\label{ap:sec:roberta_vs_yanai}
+After seeing in \S\ref{sec:Clustering} the repeated behavior on several granularity levels, we were curious whether we could receive the same behavior on a larger granularity level - models starting from different pre-trained RoBERTa models, and fine-tuned on the same datasets. 
+In this experiment, we employ two pre-trained RoBERTa models, the original RoBERTa-base and the re-implementation of RoBERTa-base created by \citet{yanai_roberta}. We fine-tune each one on the same datasets, from the General family. Results show that the models get clustered according to the pre-trained model they were created from, regardless to the fine-tuning they went through. This might arise from the low distances moved from the initialization, pre-training changes the model's weights much more than fine-tuning. Therefore, since we start from different pre-trained models, the resulted fine-tuned models are more similar to the pre-trained model they started from. 
+
+As the results on both pre-trained models are comparable, we deduce that there is not one unique basin or region for each ability, but many. However, around a starting point it seems there are distinct regions within reach. 
+
+
+
+\section{Cause: Data Type, not Size}\label{ap:sec:data_amounts}
+We provide the clustering and visualize with t-SNE in Fig.~\ref{fig:equal_data_size}. We see that the clustering and the data type agree in all but one of the cases.
+
+We provide in Fig.~\ref{fig:cosine_similarities_across_sizes} a detailed view of the similarities between each pair of models by dataset and amount of data seen in training. We find that with relatively little data, the direction in space is already determined, i.e., similar datasets go to similar direction even with limited amount of data.
+
+\begin{figure}[tbhp]
+\includegraphics[width=\columnwidth]{weight_space/equal_data_size.png}
+\caption{Clusters of fine-tuned models on different datasets, with increasing train set sizes, projected by t-SNE. %The number above each dot represents the number of samples it was fine-tuned with. 
+Each model is represented as a dot, where inner color is the color of the dataset the model was fine-tuned with, and outer color is the color of the most common dataset in the cluster (representing the cluster label). Datasets names are shown in legend. }
+\label{fig:equal_data_size}
+\end{figure}
+
+
+\begin{figure*}[t]
+\includegraphics[width=0.48\textwidth]{graphs/weight_space/heatmap.png}
+    \label{fig:cosine_similarities_across_sizes}
+    % \vspace{-0.3cm}
+    \caption{Cosine similarity between models trained on different datasets, with varying data sizes (blocks). The diagonal per block is blurred at the beginning of training, but with still a small amount of data models are highly similar to models trained on similar data. We do not observe similarity between models of similar size. }
+\end{figure*}
+
+
+
+\section{Similarity Per Task and Domain}\label{ap:sec:sim_per_task_and_domain}
+As noted in \ref{sec:datasets}, the datasets we use can be separated into specific four dataset families in addition to the general group: NLI, Sentiment analysis, Topic, and Twitter. while the first three are characterized by their task, the last group is characterized by the \emph{domain} of the dataset it contained. As one  can see in Fig.~\ref{fig:clusters_of_tasks_and_domain} and \ref{tab:clusters_of_tasks_and_domain} although the clustering shows good separation between task groups, it struggles to separate the Twitter domain group models from the other groups. Separating the space into 4 clusters and labeling them in a 1-to-1 mapping to maximize accuracy, we find 31 f-score on the Twitter cluster and 62,71,1 on the Topic, Sentiment and NLI groups respectively. 
+
+A possible explanation may be that the domain feature is orthogonal to the task feature, in the sense that some datasets should be assigned to two groups at the same time (for example  TweetEval Sentiment Analysis \citep{rosenthal-etal-2017-semeval} is part of the Twitter domain group, as well as the Sentiment analysis task group). 
+This gives place to two competing hypotheses that we leave unanswered. Either the regions of domains overlap with regions of tasks; or, even if less likely, domains are not separated into regions in space, unlike tasks. 
+
+ \begin{table}[]
+     \centering
+ \small
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+Experiment/class            & Twitter & NLI & Topic & Sentiment & Avg \\ \hline
+F1 Cluster Tasks and Domain & 30      & 100 & 61    & 71        & 65  \\ \hline
+F1 Cluster Tasks            &         & 100 & 87    & 83        & 90  \\ \hline
+\end{tabular}
+     \caption{$F_1$ Score - Classification performance by cluster majority. In columns, model group names, in rows the two clustering settings, with and without the domain group (Twitter).}
+     \label{tab:clusters_of_tasks_and_domain}
+ \end{table}
+
+\begin{figure*}[t]
+    \includegraphics[width=\textwidth]{graphs/weight_space/clusters_tasks.pdf}
+    \label{fig:clusters_of_tasks_and_domain}
+\caption{Clusters of fine-tuned models, trained on datasets groups, distinct by task and domain. The models projected by t-SNE, where each model is represented as a dot, where the inner color is the color of the task/domain the model was fine-tuned with and the outer color is the color of the most common task/domain in the cluster (representing the cluster label). 
+We find that tasks are can be easily distinguished, while it is hard to separate Twitter domain models.
+}
+\end{figure*}
+
+
+\section{Interpolation Between Models}\label{ap:sec:interpolations}
+We provide a more comprehensive interpolation experiment. In it we show the interpolation between pairs of models and report the loss of each of the datasets used to create the pair of models, as well as the average reported in the main paper.
+
+In Fig.~\ref{fig:interpolation_all}, one can see not only the interpolation between models in In, but interpolation between the centroids. We take the average of all the models in one group from which we interpolate (e.g., all MNLI models) and set it as a centroid. We then repeat it on the other group and interpolate between those centroids instead of interpolating between actual fine-tuned models.
+We find that although now we are interpolating between two points that were both not the outcome of traditional ways of optimization, we find comparable and often even lower losses than before. This also motivates the practical experiments reported in \S\ref{sec:practical}.
+
+\begin{figure*}[t]
+\subfigure[Interpolation Per Dataset]{
+    \includegraphics[width=\textwidth]{loss_space/interpolations/interpolations_all_targets.png}
+    \label{fig:interpolation_all_sst}
+    % \vspace{-0.3cm}
+    }
+% \hfill
+% \subfigure[Interpolation Per Task]{
+%     \includegraphics[width=0.48\textwidth]{loss_space/interpolations/interpolations_all_targets.png}
+%     \label{fig:interpolation_all_nli}
+%     % \vspace{-0.3cm}
+% }
+\caption{Losses of linearly interpolated models created between pairs of similar models. In each figure, the solid line is the losses' average during interpolations for different $ \alpha $ values, the edges of the lines represent the pure fine-tuned models we interpolated, Y axis is the average loss value, X axis is the position determined by $\alpha$, N is the number of pairs we interpolated between. The minimum average loss during the interpolation is noted and the shade is the standard deviation of the losses average. The purple line provides the average loss of the interpolation between centroids of models.
+\label{fig:interpolation_all}}
+\end{figure*}
+
+
+\section{Loss Region Outside of Models in Other Directions}\label{ap:sec:not_inter_edge}
+After seeing that we can reach outside of regions by performing linear-extrapolation, we test the performance of models when we move away to different directions. 
+To test it, we start with several models of the same region, calculate their centroid by averaging their weights, and gradually move away from this centroid according to the same procedure as in section~\ref{sec:behavior_per_fine-tuning}. We move away from the centroid towards one of two directions: towards the origin of the axis, or towards random directions.  
+We evaluate on the same datasets the In models were fine-tuned on. 
+
+Figure~\ref{fig:random_directions} shows the results for the first and third granularity levels. 
+
+A detailed analysis for each level follows. 
+
+
+\paragraph{Outside of the Dataset Region.}
+We compare the performance of three types of models: fine-tuned models on MNLI, models moving from the centroid of MNLI models to the origin, and models moving from it to random directions. 
+
+Results show that when the distance of the generated models from the centroid is similar to the distance of the fine-tuned models ($radius\le1$), the generated models perform as well as the fine-tuned models, meaning we are still inside the MNLI region and all models share the knowledge needed for the MNLI target task. It also implies the directions in which fine-tuned models vary are not special, most changes around the center are equally acceptable.
+
+When the distance increases and we move farther away from the centroid, the performance of the randomly generated models decreases significantly, indicating the end of the region. A surprising finding is that this happens on random directions, but not when going towards the origin. The performance in that case is similar to the performance of the fine-tuned models, even when the models are farther from the centroid then the fine-tuned models. While we did not expect this phenomenon or have an explanation to it, we report it as an avenue for future work.
+
+
+\paragraph{Outside of the Fine-tuning Region.}
+We compare the performance of three types of models: fine-tuned models on datasets from the {General} family, models starting from the centroid of those models towards the origin or towards random directions. Each time, we evaluate all above models on a single dataset from the {General} family, separating the performance of the model fine-tuned on the target dataset (called source model), to the rest of fine-tuned models (called non-source models), resulting in total of four types of models in the comparison, including the two types of generated models starting from the centroid. 
+We average the performance of each type on all target datasets we evaluate on, and show the results in Figure~\ref{fig:random_fine-tuning}. We can see that the source model outperforms all other models. For small distances from the centroid, the non-source models underperform the generated models, and for large distances it outperform the generated models going towards random directions. The generated models going towards the origin outperform the two above types of models, for all distances. These results suggest that when staying close enough to the centroid, roaming from the centroid to different directions might be superior to a fine-tuned model on a different dataset. However, when distancing far from the centroid, fine-tuned models on other datasets then the target dataset perform better than generated models going towards random directions, since the last are probably outside of the region. 
+Worth noticing, the standard deviation of the last is meaningfully larger than the rest of the models, and of the one of generated models in the {Dataset} granularity level. 
+
+
+
+\begin{figure*}[t]
+\subfigure[Outside of Dataset Region]{\includegraphics[width=0.48\textwidth]{edges_of_groups/random_around-centroid/around_mnli.png}
+    \label{fig:random_dataset}}
+\subfigure[Outside of Fine-Tuning Region]{\includegraphics[width=0.48\textwidth]{edges_of_groups/random_around-centroid/around_ft.png}
+    \label{fig:random_fine-tuning}}
+% \begin{subfigure}{}
+%     \includegraphics[width=0.48\textwidth]{edges_of_groups/random_around-centroid/around_mnli.png}
+%     \caption{Outside of Dataset Region}
+%     \label{fig:random_dataset}
+%     % \vspace{-0.3cm}
+% \end{subfigure}
+% \hfill
+% \begin{subfigure}{}
+%     \includegraphics[width=0.48\textwidth]{edges_of_groups/random_around-centroid/around_ft.png}
+%     \caption{Outside of Fine-Tuning Region}
+%     \label{fig:random_fine-tuning}
+%     % \vspace{-0.3cm}
+% \end{subfigure}
+\caption{Performance of the fine-tuned and the generated models from the centroid to the origin and to random directions, with respect to the distance from the region. In each graph, Y axis is the accuracy, X axis is the radius (which is the $ \alpha $ values used for generating the models. Only relevant for the constant lines), the solid lines present the average accuracy of the generated models, the dashed lines present the average accuracy of the fine-tuned models (a constant value), and the shade is the standard deviation of the accuracies average. Models' groups in legend.}  
+\label{fig:random_directions}
+\end{figure*}
+
+
+\section{Extrapolation Between Models}\label{ap:sec:extrapolations}
+We provide a more comprehensive extrapolation experiment showing each time the extrapolation with the loss of each of the datasets used to create the pair of models, and the average reported in the main paper. We find (see Fig.~\ref{fig:extrapolaion_all_nli}) that despite all of our datasets called and framed as natural language inference, WNLI \citep{Levesque2011TheWS} behaves differently and might be considered not strictly a part of the region. This may also explain the long tail in Fig.~\ref{fig:metric_nli_g'}.
+
+\begin{figure*}[t]
+\centering
+% \subfigure[Extrapolation Per Dataset]{
+%     \includegraphics[width=\textwidth]{edges_of_groups/extrapolations/extrapolations_glue_all_targets.png}
+%     \label{fig:extrapolation_per_dataset}}
+%     % \vspace{-0.3cm}
+% \hfill
+\subfigure[Extrapolation Per Task and mixed]{
+    \includegraphics[width=.48\textwidth]{graphs/edges_of_groups/extrapolations/extrapolations_glue_all_targets1.png}
+    \label{fig:extrapolation_mixed}
+    % \vspace{-0.3cm}
+    }
+\hfill
+\subfigure[Extrapolation Per Domain]{
+    \includegraphics[width=.48\textwidth]{graphs/edges_of_groups/extrapolations/extrapolation_nli_matrix.png}
+    \label{fig:extrapolaion_all_nli}
+    % \vspace{-0.3cm}
+    }
+\caption{Losses of linearly extrapolation models created between pairs of similar models. In each figure, the solid line is the average losses during extrapolations for different $ \alpha $ values, the vertical dashed lines indicate the average loss of the pure models we extrapolate ($\alpha=0$ or $\alpha=1$), Y axis is the average loss value, X axis is the position (meaning the $ \alpha$ and $(1-\alpha)$ values used in the extrapolation), N is the number of pairs we extrapolated between, the values on top of the line are the loss at the edges and at the minimum average loss during the extrapolation, and the shade is the standard deviation of the losses average. Each Column represents extrapolation between different types of models and each row evaluates those same models and their extrapolations on a different target tasks.} 
+\label{fig:extrapolation_all}
+\end{figure*}
+
+
+
+
+\section{Efficient Fine-tuning}\label{ap:sec:bitfit}
+We provide in this section the full results of efficiently fine-tuning. We provide the full results of the regular fine-tuning in Table \ref{tab:efficient} and the few-shot setting in Table \ref{tab:efficient_fs} and Fig.~\ref{fig:bitfit_small}.
+
+
+
+\begin{figure}[t]
+\centering
+    \includegraphics[width=\columnwidth]{graphs/practical/acc_diff_small.pdf}
+    
+\caption{Losses of pre-trained and centroid models on several target datasets, where both models were efficiently fine-tuned using BitFit in a few-shot scenario limiting training data to 1K.\label{fig:bitfit_small}}
+\end{figure}
+
+\begin{table}[htb]
+    \centering
+\small
+\begin{tabular}{lrrrrrrrrrrrrr}
+\toprule
+dataset name & boolq &  cb & cola & mnli & mrpc & multirc & qnli &  qqp &  rte & sst2 &  wic & wnli & mean \\
+\midrule
+Pre-train & 62.17 & 50.36 & 69.13 & 53.17 & 68.38 &  57.20 & 64.88 & 74.49 & 50.40 & 78.78 & 55.14 & 54.08 & 61.51 \\
+Fuse   & 62.23 & 56.79 & 69.49 & 63.01 & 69.46 &  57.14 & 73.77 & 79.91 & 61.59 & 84.91 & 55.52 & 52.68 & 65.54 \\
+Gain   &  0.06 & 6.43 & 0.36 & 9.85 & 1.08 &  -0.06 & 8.89 & 5.42 & 11.19 & 6.12 & 0.38 & -1.41 & 4.03 \\
+\bottomrule
+\end{tabular}
+    \caption{Gains of efficient fine-tuning starting from the centroid or the pre-trained model. In columns names of datasets (mean is their average) and in rows the choice of base model and their difference, the gain.}
+    \label{tab:efficient}
+\end{table}
+
+\begin{table}[htb]
+    \centering
+\small
+\begin{tabular}{lrrrrrrrrrrrrr}
+\toprule
+dataset name & boolq &  cb & cola & mnli & mrpc & multirc & qnli &  qqp &  rte & sst2 &  wic & wnli & mean \\
+\midrule
+Pre-train & 62.17 & 50.36 & 69.13 & 34.04 & 68.38 &  57.20 & 50.72 & 63.18 & 48.52 & 50.92 & 49.91 & 54.08 & 54.88 \\
+Fuse   & 62.23 & 56.79 & 69.49 & 63.01 & 69.46 &  57.14 & 73.77 & 79.91 & 61.59 & 84.91 & 55.52 & 52.68 & 65.54 \\
+Gain   &  0.06 & 6.43 & 0.36 & 28.97 & 1.08 &  -0.06 & 23.04 & 16.74 & 13.07 & 33.99 & 5.61 & -1.41 & 10.66 \\
+\bottomrule
+\end{tabular}
+    \caption{Gains of efficient fine-tuning with up to 1K examples, starting from the centroid or the pre-trained model. In columns names of datasets (mean is their average) and in rows the choice of base model and their difference, the gain.}
+    \label{tab:efficient_fs}
+\end{table}
+
+\section{Limitations}
+We discuss limitations where relevant throughout the work, but also provide this section for general discussion of limitations.
+
+While our results were very robust when referring to tasks, we did not find many groups of datasets of distinct domains to test on and got mixed results in those aspects. We discuss the results in App.~\ref{ap:sec:sim_per_task_and_domain}.
+
+The scope of our experiments is large in some aspects but a limitation in others. While our experiments included thousands of fine-tuned models, trained on 36 datasets and also evaluated on 36 datasets. We did not replicate it on many pre-trained models as well.
+
+\end{document}
