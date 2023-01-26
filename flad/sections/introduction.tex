@@ -19,9 +19,9 @@ Few-shot learning is an attractive learning setting for many reasons: it promise
 
  
 % What are the challenges of FLAD?
-FLAD methods introduce their own challenges, including algorithmic and computational complexity.
+However, FLAD methods can introduce their own challenges, including increased algorithmic and computational complexity.
 % Algorithmic complexity
-Incorporating auxiliary data into the training algorithm introduces a large space of design choices for FLAD learning algorithms (e.g.\ how and when to train on auxiliary data).
+Specifically, incorporating auxiliary data into the training algorithm introduces a large space of design choices for FLAD learning algorithms (e.g.\ how and when to train on auxiliary data).
 Manually designing the curriculum for training on large quantities of auxiliary data is not feasible due to the combinatorially large search space, and hand-picking which auxiliary data to use (e.g.\ in-domain or on-task) may lead to sub-optimal results (see section 6.2 from~\citet{feta_albalak}).
 % Computational complexity
 Delegating such design choices to an algorithm can lead to better solutions, as demonstrated in the transfer learning \citep{vu-etal-2020-exploring, pruksachatkun-etal-2020-intermediate}, meta-learning \citep{10.5555/296635, bansal-etal-2020-self}, and multi-task literature \citep{Wu2020Understanding, aghajanyan-etal-2021-muppet}. However, such algorithmic design choices require additional computation, motivating the search for efficient methods as the quantity of auxiliary data increases.
@@ -37,10 +37,10 @@ In this work, we consider the FLAD setting where auxiliary data is divided into 
 \end{enumerate}
 
 % How do we relate our problem to MAB?
-In this work, we design algorithms that satisfy our desiderata by drawing inspiration from the central problem in multi-armed bandits (MAB) settings: the exploration-exploitation trade-off \citep{macready1998bandit, simpkins2008optimal}. We relate the set of auxiliary datasets to the arms of a MAB and tailor the classic \ex{} \citep{auer2002nonstochastic} and \ucb{} \citep{auer2002finite} algorithms to fit the FLAD framework by designing an efficient gradient-based reward signal. Figure \ref{fig:flad_overview} provides a basic illustration of how we formulate FLAD as an MAB problem.
+In this work, we design algorithms that satisfy our desiderata by drawing inspiration from the central problem in multi-armed bandit (MAB) settings: the exploration-exploitation trade-off \citep{macready1998bandit, simpkins2008optimal}. We relate the set of auxiliary datasets to the arms of a MAB and tailor the classic \ex{} \citep{auer2002nonstochastic} and \ucb{} \citep{auer2002finite} algorithms to fit the FLAD framework by designing an efficient gradient-based reward signal. Figure \ref{fig:flad_overview} provides a basic illustration of how we formulate FLAD as an MAB problem.
 
 % What does this paper do?
-Our study presents two efficient algorithms, \ex{}-FLAD and \ucb{}-FLAD, which enhance the generalization capabilities of a machine learning model. To empirically validate our approaches, we utilize readily available auxiliary datasets from P3 \citep{bach-etal-2022-promptsource} which may be in- or out-of-domain and related or unrelated to the target task. We evaluate our methods on the same held-out tasks as T0~\citep{sanh2022multitask} and show that, when using the same collection of auxiliary datasets, our algorithms outperform T0 (which simply concatenates the constituent datasets of P3) by 5.1\% (\ex{}-FLAD) and 5.6\% (\ucb{}-FLAD) absolute. Furthermore, incorporating all available datasets in P3 (i.e.\ not just those used to train T0) increases the improvement to 7.6\% and 9.1\%.
+Our study presents two efficient algorithms, \ex{}-FLAD and \ucb{}-FLAD, which enhance the generalization capabilities of a machine learning model in few-shot settings. To empirically validate our approaches, we utilize readily available auxiliary datasets from P3 \citep{bach-etal-2022-promptsource} which may be in- or out-of-domain and related or unrelated to the target task. We evaluate our methods on the same held-out tasks as T0~\citep{sanh2022multitask} and show that, when using the same collection of auxiliary datasets, our algorithms outperform T0 (which simply concatenates the constituent datasets of P3) by 5.1\% (\ex{}-FLAD) and 5.6\% (\ucb{}-FLAD) absolute. Furthermore, incorporating all available datasets in P3 (i.e.\ not just those used to train T0) increases the improvement to 7.6\% and 9.1\% respectively.
 
 % Summarization of contributions/findings
 
