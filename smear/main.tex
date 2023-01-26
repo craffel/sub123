@@ -122,9 +122,9 @@
 \begin{abstract}
 Sparsely-activated neural networks with conditional computation learn to route their inputs through different ``expert'' subnetworks, providing a strong structural prior and reducing computational costs.
 Despite their possible benefits, models with learned routing often underperform their parameter-matched densely-activated counterparts as well as models that use non-learned heuristic routing strategies.
-In this paper, we hypothesize that these shortcomings stem from the gradient estimation techniques used to train sparsely-activated models with non-differentiable discrete routing decisions.
+In this paper, we hypothesize that these shortcomings stem from the gradient estimation techniques used to train sparsely activated models with non-differentiable discrete routing decisions.
 To address this issue, we introduce \textbf{S}oft \textbf{M}erging of \textbf{E}xperts with \textbf{A}daptive \textbf{R}outing (SMEAR), which avoids discrete routing by using a single ``merged'' expert constructed via a weighted average of the experts' parameters.
-SMEAR incurs a negligible increase in computational costs while facilitating standard gradient-based training.
+By routing activations through a single merged expert, SMEAR does not incur an increase in computational costs and facilitates standard gradient-based training.
 We empirically validate that the routing strategies learned via typical gradient estimation techniques underperform hand-designed heuristic strategies and that SMEAR outperforms both.
 We also provide analysis demonstrating that the experts learned via SMEAR exhibit a significant amount of specialization.
 \end{abstract}
@@ -164,7 +164,7 @@ For example, \citet{mittal2022modular} investigate models with a continuous rout
 However, models with task-specific modules \citep{gururangan2021demix, kudugunta2021beyond} provide evidence that it is possible to train performant models with specialized experts.
 As an extreme example, \citet{roller2021hash} achieves results comparable to learned routing with a fixed random routing.
 % This implies that learned routing might not be learning a meaningful solution.  % Fix
-Relatedly, \citet{fedus2021switch} find the gain from scaling up parameters by 30$\times$ with a sparsely-activated model is smaller than scaling up both parameters and FLOPs by 3$\times$ in a dense model.
+Relatedly, \citet{fedus2021switch} find the gain from scaling up parameters by 30$\times$ with a sparsely activated model is smaller than scaling up both parameters and FLOPs by 3$\times$ in a dense model.
 % Relatedly, \citet{switch} find that a 7.4B parameter model with conditional computation underperforms a 770M parameter model with similar architecture and training data.
 As a possible explanation, \citet{clark2022unified} characterize how models with conditional computation improve with scale and find a detrimental term that scales with the product of the log number of experts and active parameters.
 Consequently, increasing the number of experts yields limited returns and existing methods for training conditional computation models may only be helpful when the number of active parameters is moderate.
@@ -191,7 +191,7 @@ We then describe our experimental findings in \cref{sec:setup}, discuss related 
 \section{Background}
 \label{sec:background}
 
-To provide the necessary background for our work, we first explain how sparsely-activated neural networks use conditional computation, then discuss gradient estimators that enable learning routing strategies.
+To provide the necessary background for our work, we first explain how sparsely activated neural networks use conditional computation, then discuss gradient estimators that enable learning routing strategies.
 In addition, we define the notion of ``heuristic'' routing strategies in settings where a performant routing can be hand-designed.
 
 \subsection{Routing Among Experts}
@@ -200,7 +200,7 @@ In models that use discrete routing among experts (i.e.\ subnetwork modules), ex
 An expert routing block $B$ comprises a set of $N$ experts $\{f_1, f_2, \dots f_N\}$ and a router $R$. 
 Experts in the same block accept inputs of the same dimensionality.
 Given a hidden-state representation $u$, the output of the $i$-th expert with parameters $\theta_i$ is $f_i(u, \theta_i)$.  
-In our work, the router chooses a single $f_i$ to process the input of the block (though sparsely-activated models in other work may use more than one expert \citep{shazeer2017outrageously, du2022glam}). % produces a subset of $F$ to decide the active subnetworks $R(x) \subseteq F$. 
+In our work, the router chooses a single $f_i$ to process the input of the block (though sparsely activated models in other work may use more than one expert \citep{shazeer2017outrageously, du2022glam}). % produces a subset of $F$ to decide the active subnetworks $R(x) \subseteq F$. 
 %Finally, the aggregation operation $S$ takes the output of the chosen subnetwork and produces the output for the block.
 Thus we can use the block $B$ like any multi-layer building block in a neural network. % consider changing "building block" to layer
 % In most cases, $S$ is simply summation, but some gradient estimators leverage different designs. 
@@ -208,7 +208,7 @@ Thus we can use the block $B$ like any multi-layer building block in a neural ne
 \subsection{Gradient Estimators}
 \label{sec:estimators}
 
-In sparsely-activated models that involve discrete adaptive routing, it is not possible to train the router's parameters with standard gradient-based learning.
+In sparsely activated models that involve discrete adaptive routing, it is not possible to train the router's parameters with standard gradient-based learning.
 Fortunately, gradient estimators can provide approximate gradients to the router parameters.
 There are a few common designs shared by models that use gradient estimators to train routers. 
 Their router $R$ often applies a lightweight network to some intermediate hidden states $v$ in the model rather than the original input to the full model. 
@@ -428,7 +428,7 @@ Full results are provided in \cref{sec:full_results}.
 
 \subsection{Results}
 
-To assess the overall effectiveness of routing strategies learned with SMEAR, we compare to the performance attained by sparsely-activated models trained with the gradient estimators described in \cref{sec:estimators} and models with different heuristic routing strategies described in \cref{sec:heuristic}.
+To assess the overall effectiveness of routing strategies learned with SMEAR, we compare to the performance attained by sparsely activated models trained with the gradient estimators described in \cref{sec:estimators} and models with different heuristic routing strategies described in \cref{sec:heuristic}.
 A summary of our results is shown in \cref{tab:main}.
 First, we find that models using routing strategies learned through gradient estimators do not outperform tag routing in either settings. 
 Specifically, the best-performing estimator (REINFORCE) in T5-GLUE slightly underperforms tag routing and the best performing estimator (Top-$k$) in ResNet-DomainNet underperforms tag routing by 1.5\%.
@@ -486,7 +486,7 @@ Routing distributions for all routers in all layers can be found in \cref{sec:ro
 Various works have investigated ways to circumvent the difficulties in routing in multi-task learning settings.
 For example, \citet{deecke2020latent,hazimeh2021dselect,dua2021tricks} start training with most of the experts activated and gradually introduce sparsity. \citet{kudugunta2021beyond, ponti2022combining, ma2019snr, Gupta2022SparselyAM} group examples from the same task together and introduce task-specific parameters in the router.
 Some works avoid learned routing by hand-crafting heuristic routing strategies.
-\citet{gururangan2021demix} built sparsely-activated language models where different domains use separate experts. On an unknown domain, the model assesses the experts' fitness to combine the experts.
+\citet{gururangan2021demix} built sparsely activated language models where different domains use separate experts. On an unknown domain, the model assesses the experts' fitness to combine the experts.
 \citet{Tang2022OneMM, Pfeiffer2022LiftingTC, Pfeiffer2020MADXAA} specify assign experts based on task-related human knowledge.
 \citet{li2022sparse} demonstrate that models structured as sparse mixture-of-experts generalize effectively to novel domains, as compared to other domain generalization algorithms in vision transformers. 
 % Interestingly, \citet{zuo2021taming, wang2022adamix} explore random routing with consistency regularization as a form of model ensembling. 
