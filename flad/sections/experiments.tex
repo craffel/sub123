@@ -3,7 +3,7 @@
 
 \paragraph{Models}
 % (1) What models do we use?
-For our experiments, we utilize encoder-decoder models from the T5 family of pre-trained models \cite{raffel2020t5}. Specifically, we experiment with LM-adapted T5 (T5-LM) and T0. The T5-LM model, from \citet{lester-etal-2021-power}, further trains the T5.1.1 model for 100,000 steps (corresponding to 100B tokens) from the C4 dataset on prefix language modelling objective (i.e.\ predicting the following text based on a prefix). The T0 model is initialized from the T5-LM model and further trained on a multitask mixture of prompted datasets as described by \citet{sanh2022multitask}.
+For our experiments, we utilize encoder-decoder models from the T5 family of pre-trained models \cite{raffel2020t5}. Specifically, we experiment with LM-adapted T5 (T5-LM) and T0. The T5-LM model, from \citet{lester-etal-2021-power}, further trains the T5.1.1 model for 100,000 steps (corresponding to 100B tokens) from the C4 dataset on prefix language modelling objective (i.e.\ predicting the following text based on a prefix). The T0 model was initialized from T5-LM and was further trained on a multitask mixture of prompted datasets as described by \citet{sanh2022multitask}.
 We repeat each experiment with the T5-LM XL (hereafter T5-XL) and T0-3B models (both using the same architecture with 2.85 billion parameters) as starting checkpoints (from Hugging Face Transformers~\citep{wolf-etal-2020-transformers}).
 % We use the base-sized T5-LM (248 million parameters), XL-sized T5-LM, and T0-3B models (both 2.85 billion parameters).
 % We repeat each experiment twice by initializing from T5-XL and T0-3B checkpoints from Hugging Face Transformers \citep{wolf-etal-2020-transformers}.

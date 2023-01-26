@@ -1,5 +1,5 @@
 \section{Adapting MAB algorithms for FLAD}
-In this section we describe our variations on the \ex{} and \ucb{} algorithms based on how these algorithms do and do not fit for the FLAD setting. We present pseudo-code for our methods in Algorithms \ref{alg:exp3} and \ref{alg:ucb1}.
+In this section we describe our variations on the \ex{} and \ucb{} algorithms based on how these algorithms do and do not fit the FLAD setting. We present pseudo-code for our methods in Algorithms \ref{alg:exp3} and \ref{alg:ucb1}.
 
 % \alon{$t$ has been omitted in algorithm pseudo-code where obvious from context}
 \subsection{\ex{} for FLAD}
@@ -14,7 +14,7 @@ First, we assume that the helpfulness or harmfulness of training on a particular
 Of course, because we randomly sample batches during training, the reward generating process is noisy and we cannot know for sure early on whether a dataset is actually helpful or harmful.
 To model this assumption, we use a decaying exploration rate, as proposed by \citet{pmlr-v24-seldin12a}.
 % Instead of using a constant exploration rate, $\frac{1}{K}$, we use an exploration rate that changes over time.
-Recall that $K$ is the number of auxiliary datasets, then at the beginning of round $t$ let the exploration rate be
+Recall that $K$ is the number of auxiliary datasets. Then at the beginning of round $t$ we use an exploration rate of
 \begin{equation}
 \label{eq:exploration_rate}
     \mathcal{E}_{t} = \min \Bigl\{\frac{1}{K}, \sqrt{\frac{\ln K}{K\cdot t}} \Bigr\}
@@ -212,7 +212,7 @@ On each turn, the learner first computes the current exploration rate as in Equa
 % space complexity
 
 \subsection{\ucb{} for FLAD}
-While the \ex{} algorithm accounts for the stochastic, non-stationary reward generating process in FLAD, \ucb{} does not. To address both of these in \ucb{}-FLAD, we include an exponential moving average when estimating the mean reward for a given arm.
+While the \ex{} algorithm accounts for the stochastic, non-stationary reward generating process in FLAD, \ucb{} does not. To address this in \ucb{}-FLAD, we include an exponential moving average when estimating the mean reward for a given arm.
 Formally, if at turn $t$ the learner selects auxiliary dataset $\mathcal{D}_a$, then we update the estimated mean reward $\hat{R}_{a}$ as 
 \begin{equation}
 \label{eq:ema_smoothing}
@@ -227,7 +227,7 @@ This is done for each auxiliary dataset by calculating the gradient $\nabla_{a}=
 % Our adapation of the UCB1 algorithm
 \paragraph{\ucb{}-FLAD Algorithm}
 % Our variation on the \ucb{} algorithm mostly follows the original.
-First, initialize the estimated rewards $\hat{R}_{a}$ by approximating the gradient from each dataset as described in the previous paragraph. Then at each turn the learner computes the upper confidence bounds for each auxiliary dataset as in Equation~\ref{eq:ucb}. Next, the learner samples a batch of data from the dataset with highest upper confidence bound and calculates the gradient.
+First, the estimated rewards $\hat{R}_{a}$ are initialized by approximating the gradient from each dataset as described in the previous paragraph. Then at each turn the learner computes the upper confidence bounds for each auxiliary dataset as in Equation~\ref{eq:ucb}. Next, the learner samples a batch of data from the dataset with highest upper confidence bound and calculates the gradient.
 % If there is a tie, the learner selects randomly from those that are tied.
 This process repeats $G$ times, at which point the learner calculates the gradient of the target dataset and updates the model with all auxiliary and target gradients that have accumulated. Finally, the smoothed estimated mean reward is calculated using Equation~\ref{eq:ema_smoothing}. See Algorithm~\ref{alg:ucb1} for pseudo-code.
 
